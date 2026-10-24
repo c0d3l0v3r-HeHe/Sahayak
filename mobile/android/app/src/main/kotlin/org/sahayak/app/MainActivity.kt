@@ -1,4 +1,4 @@
-package `in`.sahayak.sahayak
+package org.sahayak.app
 
 import io.flutter.embedding.android.FlutterActivity
 
