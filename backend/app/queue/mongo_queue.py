@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from pymongo import ReturnDocument
@@ -38,16 +38,30 @@ class MongoJobQueue(JobQueue):
         return job_id
 
     async def claim(self, worker_id: str) -> Job | None:
+        # Under contention find_one_and_update can come back empty when the document it was
+        # about to take is claimed by someone else first; retry while claimable jobs remain.
+        for _ in range(5):
+            job = await self._claim_once(worker_id)
+            if job is not None:
+                return job
+            if await self.col.find_one(self._claimable(utcnow()), {"_id": 1}) is None:
+                return None
+        return None
+
+    def _claimable(self, now: datetime) -> dict[str, Any]:
+        return {
+            "attempts": {"$lt": self.max_attempts},
+            "$or": [
+                {"state": "ready", "run_after": {"$lte": now}},
+                # stale claim: the worker stopped heart-beating (crash / restart)
+                {"state": "claimed", "claimed_at": {"$lt": now - self.claim_timeout}},
+            ],
+        }
+
+    async def _claim_once(self, worker_id: str) -> Job | None:
         now = utcnow()
         doc = await self.col.find_one_and_update(
-            {
-                "attempts": {"$lt": self.max_attempts},
-                "$or": [
-                    {"state": "ready", "run_after": {"$lte": now}},
-                    # stale claim: the worker stopped heart-beating (crash / restart)
-                    {"state": "claimed", "claimed_at": {"$lt": now - self.claim_timeout}},
-                ],
-            },
+            self._claimable(now),
             {
                 "$set": {"state": "claimed", "claimed_by": worker_id, "claimed_at": now},
                 "$inc": {"attempts": 1},

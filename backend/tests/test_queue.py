@@ -28,6 +28,9 @@ async def test_concurrent_claims_are_exclusive(queue):
         await queue.enqueue(f"t{i}")
     jobs = await asyncio.gather(*(queue.claim(f"w{i}") for i in range(20)))
     claimed = [j.task_id for j in jobs if j]
+    assert len(claimed) == len(set(claimed))  # never handed to two workers
+    while (job := await queue.claim("late")) is not None:
+        claimed.append(job.task_id)
     assert sorted(claimed) == [f"t{i}" for i in range(5)]
 
 
