@@ -1,88 +1,92 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spot your train — demo replica</title><link rel="stylesheet" href="../common.css"></head>
+<title>Spot your train — demo replica</title><link rel="stylesheet" href="../common.css">
+<style>
+  .w3-panel { background: #1f6fb2; color: #fff; padding: 10px 14px; border-radius: 8px; margin: 12px 0; }
+  .w3-panel h3 { margin: 0; font-size: 18px; }
+  ul.nav-tabs { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 8px 0; }
+  ul.nav-tabs a { display: inline-block; padding: 6px 10px; border: 1px solid #bbb; border-radius: 6px; text-decoration: none; color: #1d1d1d; font-size: 14px; }
+  ul.nav-tabs a.active { background: #1f3b73; color: #fff; border-color: #1f3b73; }
+  .tab-pane { display: none; } .tab-pane.active { display: block; }
+  .tab-pane h4 { margin: 8px 0 4px; } .tab-pane h6 { font-size: 16px; margin: 6px 0; color: #8a4b00; }
+  .stations { font-size: 14px; color: #444; }
+  .invalid { color: #b3261e; }
+</style></head>
 <body>
-<div class="demo-banner">Sahayak demo replica of NTES — not a railway website. Status is simulated.</div>
-<header class="site"><h1>NTES (demo)</h1><p>National Train Enquiry System</p></header>
+<div class="demo-banner">Sahayak demo replica of NTES — not a railway website. Running status is simulated.</div>
+<header class="site"><h1>National Train Enquiry System (demo)</h1></header>
 <main>
-  <form class="card" id="spot" aria-label="Spot your train">
-    <h2>Spot Your Train</h2>
-    <label for="trainNo">Train Number</label>
-    <input id="trainNo" name="trainNo" inputmode="numeric" maxlength="5" placeholder="e.g. 12301">
-    <label for="jDate">Journey Date</label>
-    <select id="jDate" name="jDate"></select>
-    <button type="submit">Get Status</button>
-    <div id="error" role="alert" class="hidden"></div>
-  </form>
-
-  <section id="status" class="card hidden" aria-label="Running status">
-    <h2 id="train-name"></h2>
-    <dl class="status">
-      <dt>Last Station</dt><dd data-testid="last-station"></dd>
-      <dt>Status</dt><dd data-testid="last-event"></dd>
-      <dt>Delay</dt><dd data-testid="delay"></dd>
-      <dt>Destination</dt><dd data-testid="destination"></dd>
-      <dt>Expected Arrival</dt><dd data-testid="expected-arrival"></dd>
-      <dt>Last Updated</dt><dd data-testid="updated"></dd>
-    </dl>
-  </section>
+  <div class="w3-panel"><h3>Spot Your Train</h3></div>
+  <div class="card">
+    <label for="trainNo">Train No./Name </label>
+    <input type="text" id="trainNo" name="trainNo" placeholder="Train No./Name " maxlength="15" autocomplete="off">
+    <div id="dvMainBody"></div>
+  </div>
+  <p class="stations">Note - Data shown with (*) are dynamic in nature and may change.</p>
 </main>
 <script>
+// [name, [[station, code], ...], scheduled arrival at destination]
 const TRAINS = {
-  "12301": ["Howrah Rajdhani Express", ["Howrah Jn","Asansol Jn","Dhanbad Jn","Gaya Jn","Pt. DD Upadhyaya Jn","Prayagraj Jn","Kanpur Central","New Delhi"], "16:50", "10:00"],
-  "12951": ["Mumbai Rajdhani Express", ["Mumbai Central","Borivali","Surat","Vadodara Jn","Ratlam Jn","Kota Jn","New Delhi"], "17:00", "08:32"],
-  "12002": ["New Delhi Bhopal Shatabdi", ["New Delhi","Mathura Jn","Agra Cantt","Gwalior","Jhansi Jn","Bhopal Jn"], "06:00", "14:25"],
-  "12627": ["Karnataka Express", ["KSR Bengaluru","Dharmavaram Jn","Guntakal Jn","Raichur","Wadi","Daund Chord","Manmad Jn","Bhopal Jn","Jhansi Jn","Agra Cantt","New Delhi"], "19:20", "09:40"],
-  "12839": ["Howrah Chennai Mail", ["Howrah Jn","Kharagpur Jn","Bhubaneswar","Visakhapatnam","Vijayawada Jn","MGR Chennai Central"], "23:45", "04:45"],
-  "12423": ["Dibrugarh Rajdhani", ["Dibrugarh","Guwahati","New Jalpaiguri","Katihar Jn","Patna Jn","Pt. DD Upadhyaya Jn","Kanpur Central","New Delhi"], "20:55", "05:15"],
-  "12049": ["Gatimaan Express", ["Hazrat Nizamuddin","Agra Cantt","Gwalior","Jhansi Jn","Virangana Lakshmibai Jhansi"], "08:10", "12:35"],
-  "22691": ["Rajdhani Express", ["KSR Bengaluru","Anantapur","Secunderabad Jn","Nagpur","Bhopal Jn","Jhansi Jn","Hazrat Nizamuddin"], "20:00", "05:30"]
+  "12301": ["RAJDHANI EXPRES", [["HOWRAH JN","HWH"],["ASANSOL JN","ASN"],["DHANBAD JN","DHN"],["GAYA JN","GAYA"],["PT.DEEN DAYAL UPADHYAYA JN","DDU"],["PRAYAGRAJ JN","PRYJ"],["KANPUR CENTRAL","CNB"],["NEW DELHI","NDLS"]], "10:05"],
+  "12951": ["NDLS TEJAS RAJ", [["MUMBAI CENTRAL","MMCT"],["BORIVALI","BVI"],["SURAT","ST"],["VADODARA JN","BRC"],["RATLAM JN","RTM"],["KOTA JN","KOTA"],["NEW DELHI","NDLS"]], "08:32"],
+  "12002": ["NDLS BPL SHTBDI", [["NEW DELHI","NDLS"],["MATHURA JN","MTJ"],["AGRA CANTT","AGC"],["GWALIOR","GWL"],["V LAKSHMIBAI JHS","VGLJ"],["BHOPAL JN","BPL"]], "14:25"],
+  "12627": ["KARNATAKA EXP", [["KSR BENGALURU","SBC"],["DHARMAVARAM JN","DMM"],["GUNTAKAL JN","GTL"],["RAICHUR","RC"],["WADI","WADI"],["MANMAD JN","MMR"],["BHOPAL JN","BPL"],["AGRA CANTT","AGC"],["NEW DELHI","NDLS"]], "09:40"],
+  "12839": ["HWH MAS MAIL", [["HOWRAH JN","HWH"],["KHARAGPUR JN","KGP"],["BHUBANESWAR","BBS"],["VISAKHAPATNAM","VSKP"],["VIJAYAWADA JN","BZA"],["MGR CHENNAI CTL","MAS"]], "04:45"]
 };
-const POOL = ["Lucknow NR","Varanasi Jn","Patna Jn","Ahmedabad Jn","Jaipur","Ajmer Jn","Indore Jn","Nagpur","Raipur Jn","Pune Jn","Secunderabad Jn","Vijayawada Jn","Ernakulam Jn","Coimbatore Jn","Madurai Jn","Ranchi","Bhubaneswar","Guwahati","Amritsar Jn","Jammu Tawi"];
+const POOL = [["LUCKNOW NR","LKO"],["VARANASI JN","BSB"],["PATNA JN","PNBE"],["AHMEDABAD JN","ADI"],["JAIPUR","JP"],["INDORE JN","INDB"],["NAGPUR","NGP"],["RAIPUR JN","R"],["PUNE JN","PUNE"],["SECUNDERABAD JN","SC"],["ERNAKULAM JN","ERS"],["GUWAHATI","GHY"],["AMRITSAR JN","ASR"],["JAMMU TAWI","JAT"]];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
-function iso(d) { return d.toISOString().slice(0, 10); }
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-function label(d) { return `${String(d.getDate()).padStart(2,"0")}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`; }
-const sel = document.getElementById("jDate");
-const now = new Date();
-[["Today",0],["Yesterday",-1],["Day before yesterday",-2]].forEach(([name, off]) => {
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + off, 12);
-  const o = document.createElement("option"); o.value = iso(d); o.textContent = `${label(d)} (${name})`; sel.appendChild(o);
-});
-
+function dmy(d) { return `${String(d.getDate()).padStart(2,"0")}-${MON[d.getMonth()]}-${d.getFullYear()}`; }
+function dm(d) { return `${String(d.getDate()).padStart(2,"0")}-${MON[d.getMonth()]}`; }
+function hhmm(m) { m = ((m % 1440) + 1440) % 1440; return `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`; }
 function train(no) {
   if (TRAINS[no]) return TRAINS[no];
-  const h = hash(no); const n = 5 + h % 4; const stops = [];
-  for (let i = 0; i < n; i++) { const s = POOL[(h + i * 7) % POOL.length]; if (!stops.includes(s)) stops.push(s); }
-  return [`Express ${no}`, stops, "10:15", "21:40"];
+  const h = hash(no), stops = [];
+  for (let i = 0; i < 6; i++) { const s = POOL[(h + i * 5) % POOL.length]; if (!stops.includes(s)) stops.push(s); }
+  return [`EXPRESS ${no}`, stops, "21:40"];
 }
-function fmtDelay(m) { if (m <= 0) return "On time"; const h = Math.floor(m / 60); return (h ? `${h} hr ` : "") + `${m % 60} min late`; }
-function addMin(hhmm, m) { const [h, mm] = hhmm.split(":").map(Number); const t = (h * 60 + mm + m) % 1440; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; }
-
-document.getElementById("spot").addEventListener("submit", (e) => {
-  e.preventDefault();
+function status(no, start, daysAgo) {
+  const [, stops, arr] = train(no);
+  const h = hash(no + dmy(start));
+  const delay = (h >> 5) % 5 === 0 ? 0 : 5 + (h >> 7) % 95;
+  const d = `${String(Math.floor(delay/60)).padStart(2,"0")}:${String(delay%60).padStart(2,"0")}`;
+  const last = stops[stops.length - 1];
+  const [ah, am] = arr.split(":").map(Number);
+  const arrival = new Date(start); arrival.setDate(arrival.getDate() + 1);
+  if (daysAgo >= 1) return [`Arrived at ${last[0]}(${last[1]}) at ${hhmm(ah*60+am+delay)} ${dm(arrival)} (Delay: ${d})`, "Reached Destination"];
+  if (h % 4 === 0) return ["Yet to start from its source", ""];
+  const s = stops[1 + h % Math.max(1, stops.length - 2)];
+  return [`Departed from ${s[0]}(${s[1]}) at ${hhmm(600 + h % 600)} ${dm(start)} (Delay: ${d})`, ""];
+}
+let timer = null;
+document.getElementById("trainNo").addEventListener("keyup", () => {
+  clearTimeout(timer);
   const no = document.getElementById("trainNo").value.trim();
-  const err = document.getElementById("error");
-  const section = document.getElementById("status");
-  err.classList.add("hidden"); section.classList.add("hidden");
-  setTimeout(() => {
-    if (!/^[1-9]\d{4}$/.test(no)) { err.textContent = "Train not found. Please check the train number."; err.classList.remove("hidden"); return; }
-    const [name, stops, , arr] = train(no);
-    const h = hash(no + sel.value);
-    const daysAgo = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12) - new Date(sel.value + "T12:00:00")) / 86400000);
-    const idx = daysAgo >= 1 ? stops.length - 1 : 1 + h % Math.max(1, stops.length - 2);
-    const delay = (h >> 5) % 5 === 0 ? 0 : 5 + (h >> 7) % 95;
-    const reached = idx === stops.length - 1;
-    document.getElementById("train-name").textContent = `${no} ${name}`;
-    const set = (id, v) => document.querySelector(`[data-testid=${id}]`).textContent = v;
-    set("last-station", stops[idx]);
-    set("last-event", reached ? `Reached destination ${stops[idx]}` : `Departed from ${stops[idx]}`);
-    set("delay", fmtDelay(delay));
-    set("destination", stops[stops.length - 1]);
-    set("expected-arrival", reached ? `Arrived at ${addMin(arr, delay)}` : addMin(arr, delay));
-    set("updated", new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
-    section.classList.remove("hidden");
-  }, 700);
+  if (no.length < 5) return;
+  timer = setTimeout(() => show(no), 500);
 });
+function show(no) {
+  const body = document.getElementById("dvMainBody");
+  if (!/^[1-9]\d{4}$/.test(no)) { body.innerHTML = '<h4 class="invalid">Invalid Train No. !!!</h4>'; return; }
+  const [name] = train(no);
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const days = [0, 1, 2, 3].map(n => { const d = new Date(today); d.setDate(d.getDate() - n); return d; });
+  let html = `<div class="w3-panel"><h3>${no} ${name}</h3></div><ul id="myTab" class="nav nav-tabs" role="tablist"><li role="presentation"><h5 style="margin:6px 0">Start Date :</h5></li>`;
+  days.forEach((d, i) => { html += `<li class="nav-item" role="presentation"><a class="nav-link ${i === 0 ? "active" : ""}" role="tab" href="#" data-target="train${dmy(d).toLowerCase()}">${dmy(d)}</a></li>`; });
+  html += '</ul><div class="tab-content">';
+  days.forEach((d, i) => {
+    const [line, tag] = status(no, d, i);
+    html += `<div role="tabpanel" id="train${dmy(d).toLowerCase()}" class="tab-pane ${i === 0 ? "active" : ""}"><div><h4>Start Date : ${dmy(d)} ${tag}</h4><div><h6>${line}</h6></div>
+      <p class="stations">${train(no)[1].map(s => s[0]).join(" → ")}</p></div></div>`;
+  });
+  body.innerHTML = html + "</div>";
+  body.querySelectorAll("[role=tab]").forEach(tab => tab.addEventListener("click", (e) => {
+    e.preventDefault();
+    body.querySelectorAll("[role=tab]").forEach(t => t.classList.remove("active"));
+    body.querySelectorAll("[role=tabpanel]").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.target).classList.add("active");
+  }));
+}
 </script>
 </body></html>

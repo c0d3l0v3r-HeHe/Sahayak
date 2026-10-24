@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search schemes — demo replica</title><link rel="stylesheet" href="../../common.css">
+<style>
+  .layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .sidebar { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px 16px; align-self: start; }
+  .facet { margin: 12px 0; }
+  .facet-title { font-weight: 600; display: block; margin-bottom: 4px; }
+  .facet-header { display: flex; justify-content: space-between; cursor: pointer; }
+  .facet-body.collapsed { overflow: hidden; height: 0; }
+  .facet-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .facet-row input { width: auto; }
+  .facet__control { position: relative; border: 1px solid #aaa; border-radius: 6px; padding: 6px 8px; min-height: 38px; background: #fff; cursor: text; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .facet__placeholder { color: #888; }
+  .facet__multi-value__label, .facet__single-value { background: #e6f2ec; border-radius: 4px; padding: 1px 6px; font-size: 14px; }
+  .facet__control input { border: 0; outline: 0; padding: 2px; width: 60px; font-size: 15px; }
+  .facet__menu { position: absolute; left: 0; right: 0; top: 100%; background: #fff; border: 1px solid #ccc; border-radius: 6px; max-height: 220px; overflow: auto; z-index: 5; }
+  .facet__option { padding: 6px 10px; cursor: pointer; }
+  .facet__option:hover, .facet__option.focused { background: #eef4ff; }
+  [role=article] { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  [role=article] h2 { margin: 0 0 6px; font-size: 18px; }
+  [role=article] .ministry { margin: 0 0 6px; font-size: 13px; color: #555; font-weight: 400; }
+  @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+</style></head>
+<body>
+<div class="demo-banner">Sahayak demo replica of myScheme search — not a government website. Eligibility data is simplified.</div>
+<header class="site"><h1>myScheme (demo)</h1><p>Search government schemes</p></header>
+<main class="layout">
+  <aside class="sidebar" aria-label="Filters">
+    <h2 style="font-size:16px;margin:0">Filter By</h2>
+    <div class="facet"><span class="facet-title">State/UT</span>
+      <div class="facet__control" id="state-control"><div class="facet__placeholder">Select</div>
+        <input id="facet-beneficiaryState-input" type="text" autocomplete="off" aria-autocomplete="list"></div></div>
+    <div class="facet"><div class="facet-header"><span>Gender</span><span>▾</span></div>
+      <div class="facet-body collapsed" id="gender-body">
+        <div class="facet-row"><input type="checkbox" aria-labelledby="Male" value="male"><span>Male</span></div>
+        <div class="facet-row"><input type="checkbox" aria-labelledby="Female" value="female"><span>Female</span></div>
+        <div class="facet-row"><input type="checkbox" aria-labelledby="Transgender" value="transgender"><span>Transgender</span></div>
+      </div></div>
+    <div class="facet"><span class="facet-title">Age</span>
+      <div class="facet__control" id="age-control"><div class="facet__placeholder">Select</div>
+        <input id="facet-age-general-input" readonly style="width:0;opacity:0;padding:0"></div></div>
+  </aside>
+  <section aria-label="Schemes">
+    <p id="count"></p>
+    <div id="results"></div>
+  </section>
+</main>
+<script src="../schemes.js"></script>
+<script>
+const STATES = {andhra_pradesh:"Andhra Pradesh",arunachal_pradesh:"Arunachal Pradesh",assam:"Assam",bihar:"Bihar",chhattisgarh:"Chhattisgarh",goa:"Goa",gujarat:"Gujarat",haryana:"Haryana",himachal_pradesh:"Himachal Pradesh",jharkhand:"Jharkhand",karnataka:"Karnataka",kerala:"Kerala",madhya_pradesh:"Madhya Pradesh",maharashtra:"Maharashtra",manipur:"Manipur",meghalaya:"Meghalaya",mizoram:"Mizoram",nagaland:"Nagaland",odisha:"Odisha",punjab:"Punjab",rajasthan:"Rajasthan",sikkim:"Sikkim",tamil_nadu:"Tamil Nadu",telangana:"Telangana",tripura:"Tripura",uttar_pradesh:"Uttar Pradesh",uttarakhand:"Uttarakhand",west_bengal:"West Bengal",andaman_nicobar:"Andaman and Nicobar Islands",chandigarh:"Chandigarh",dadra_nagar_haveli_daman_diu:"Dadra and Nagar Haveli and Daman and Diu",delhi:"Delhi",jammu_kashmir:"Jammu and Kashmir",ladakh:"Ladakh",lakshadweep:"Lakshadweep",puducherry:"Puducherry"};
+const AGE_RANGES = ["0 - 10","11 - 20","21 - 30","31 - 40","41 - 50","51 - 60","61 - 70","71 - 80","81 - 90","91 - 100","101 - 110"];
+const filters = { states: [], genders: [], age: null };
+
+function menu(control, options, onPick) {
+  closeMenus();
+  const m = document.createElement("div"); m.className = "facet__menu";
+  options.forEach((label, i) => {
+    const o = document.createElement("div"); o.className = "facet__option" + (i === 0 ? " focused" : "");
+    o.id = `react-select-${control.id}-option-${i}`; o.textContent = label;
+    o.addEventListener("mousedown", (e) => { e.preventDefault(); onPick(label); closeMenus(); });
+    m.appendChild(o);
+  });
+  control.appendChild(m);
+}
+function closeMenus() { document.querySelectorAll(".facet__menu").forEach(m => m.remove()); }
+
+// State/UT: searchable multi-select (type, then Enter picks the first match)
+const stateCtl = document.getElementById("state-control"), stateInput = document.getElementById("facet-beneficiaryState-input");
+stateCtl.addEventListener("click", () => stateInput.focus());
+function stateMatches() { const q = stateInput.value.trim().toLowerCase(); return Object.values(STATES).filter(s => s.toLowerCase().includes(q)); }
+stateInput.addEventListener("input", () => menu(stateCtl, stateMatches(), pickState));
+stateInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); const m = stateMatches(); if (stateInput.value && m.length) { pickState(m[0]); closeMenus(); } } });
+function pickState(label) {
+  const code = Object.keys(STATES).find(k => STATES[k] === label);
+  if (!filters.states.includes(code)) filters.states.push(code);
+  stateInput.value = ""; renderChips(stateCtl, filters.states.map(c => STATES[c]), "facet__multi-value__label"); render();
+}
+
+// Gender: collapsible checkbox list
+document.querySelector(".facet-header").addEventListener("click", () => document.getElementById("gender-body").classList.toggle("collapsed"));
+document.querySelectorAll("#gender-body input").forEach(cb => cb.addEventListener("change", () => {
+  filters.genders = Array.from(document.querySelectorAll("#gender-body input:checked")).map(c => c.value); render();
+}));
+
+// Age: non-searchable single select with ranges
+const ageCtl = document.getElementById("age-control");
+ageCtl.addEventListener("click", (e) => { if (!e.target.classList.contains("facet__option")) menu(ageCtl, AGE_RANGES, (r) => { filters.age = r; renderChips(ageCtl, [r], "facet__single-value"); render(); }); });
+
+function renderChips(control, labels, cls) {
+  control.querySelectorAll(".facet__placeholder, ." + cls).forEach(e => e.remove());
+  const input = control.querySelector("input");
+  for (const l of labels) { const c = document.createElement("div"); c.className = cls; c.textContent = l; control.insertBefore(c, input); }
+}
+
+function eligible(s) {
+  if (filters.genders.length && s.genders && !s.genders.some(g => filters.genders.includes(g))) return false;
+  if (filters.states.length && s.states && !s.states.some(st => filters.states.includes(st))) return false;
+  if (filters.age) {
+    const [lo, hi] = filters.age.split(" - ").map(Number);
+    if ((s.minAge !== undefined && hi < s.minAge) || (s.maxAge !== undefined && lo > s.maxAge)) return false;
+  }
+  return true;
+}
+function render() {
+  const list = window.SCHEMES.filter(eligible);
+  list.sort((a, b) => (b.states ? 1 : 0) - (a.states ? 1 : 0));   // state schemes first
+  const box = document.getElementById("results"); box.innerHTML = "";
+  document.getElementById("count").textContent = `We found ${list.length} schemes based on your preferences`;
+  list.forEach((s, i) => {
+    const art = document.createElement("div"); art.setAttribute("role", "article"); art.setAttribute("aria-labelledby", "scheme-name-" + i);
+    art.innerHTML = `<h2 id="scheme-name-${i}"><a href="https://www.myscheme.gov.in/schemes/${s.slug}"><span></span></a></h2><h2 class="ministry">Government of India (demo data)</h2><span></span>`;
+    art.querySelector("a span").textContent = s.name;
+    const brief = art.querySelector(":scope > span");
+    brief.textContent = s.benefit; brief.setAttribute("aria-label", "Brief description: " + s.benefit);
+    box.appendChild(art);
+  });
+}
+setTimeout(render, 400);   // the real page loads results asynchronously
+</script>
+</body></html>

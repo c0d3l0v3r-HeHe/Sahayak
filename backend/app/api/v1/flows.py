@@ -7,4 +7,7 @@ router = APIRouter(tags=["flows"])
 
 @router.get("/flows")
 async def list_flows(state: AppState = Depends(get_state)) -> dict:
-    return {"flows": [f.public() for f in state.registry.all()]}
+    return {
+        "demo_mode": state.settings.demo_mode,
+        "flows": [f.public() for f in state.registry.all()],
+    }

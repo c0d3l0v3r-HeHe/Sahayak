@@ -1,6 +1,6 @@
 {
   "id": "pnr_status",
-  "version": 1,
+  "version": 2,
   "title": {
     "en": "PNR status",
     "hi": "PNR स्थिति"
@@ -9,7 +9,7 @@
     "en": "Check if your train ticket is confirmed.",
     "hi": "देखिए कि आपका ट्रेन टिकट कन्फ़र्म हुआ या नहीं।"
   },
-  "site": "https://www.indianrail.gov.in/enquiry/PNR",
+  "site": "https://www.indianrail.gov.in/enquiry",
   "mock_path": "/pnr",
   "est_minutes_saved": 4,
   "keywords": [
@@ -55,7 +55,8 @@
     },
     {
       "type": "goto",
-      "url": "{{base}}/"
+      "url": "{{base}}/PNR/PnrEnquiry.html?locale=en",
+      "timeout_ms": 45000
     },
     {
       "type": "narrate",
@@ -65,16 +66,28 @@
     {
       "type": "fill",
       "locator": {
-        "label": "PNR Number"
+        "role": "textbox",
+        "name": "Enter PNR No."
       },
-      "value": "{{pnr}}"
+      "value": "{{pnr}}",
+      "typing_delay_ms": 80
+    },
+    {
+      "type": "click",
+      "locator": {
+        "css": "#modal1"
+      }
     },
     {
       "type": "wait_for",
       "locator": {
-        "role": "img",
-        "name": "Captcha image"
-      }
+        "css": "#CaptchaImgID"
+      },
+      "timeout_ms": 20000
+    },
+    {
+      "type": "pause",
+      "ms": 500
     },
     {
       "type": "narrate",
@@ -85,91 +98,99 @@
       "type": "ask_user",
       "kind": "captcha",
       "prompt": {
-        "en": "Please read the letters in the picture.",
-        "hi": "कृपया तस्वीर में लिखे अक्षर पढ़कर बताइए।"
+        "en": "Please read what is written in the picture.",
+        "hi": "कृपया तस्वीर में जो लिखा है, वह पढ़कर बताइए।"
       },
       "screenshot_locator": {
-        "role": "img",
-        "name": "Captcha image"
+        "css": "#CaptchaImgID"
       },
       "fill_locator": {
-        "label": "Enter the characters shown"
+        "css": "#inputCaptcha"
       }
     },
     {
       "type": "click",
       "locator": {
-        "role": "button",
-        "name": "Get Status"
+        "css": "#submitPnrNo"
       }
     },
     {
       "type": "wait_for",
       "locator": {
-        "css": "#result:not(.hidden), #error:not(.hidden)"
+        "css": "table:has(th:has-text('Booking Status')) td, #errorMessagediv:visible"
       },
-      "timeout_ms": 20000
+      "timeout_ms": 30000
     },
     {
       "type": "if_exists",
       "locator": {
-        "text": "Invalid captcha"
+        "css": "#errorMessagediv:has-text('aptcha')",
+        "visible": true
       },
       "timeout_ms": 0,
       "then": [
         {
           "type": "narrate",
-          "en": "The letters did not match. Let's try once more.",
-          "hi": "अक्षर मेल नहीं खाए। एक बार फिर कोशिश करते हैं।"
+          "en": "That did not match. Let's try once more.",
+          "hi": "यह मेल नहीं खाया। एक बार फिर कोशिश करते हैं।"
+        },
+        {
+          "type": "click",
+          "locator": {
+            "css": "#modal1"
+          }
         },
         {
           "type": "wait_for",
           "locator": {
-            "role": "img",
-            "name": "Captcha image"
-          }
+            "css": "#CaptchaImgID"
+          },
+          "timeout_ms": 20000
+        },
+        {
+          "type": "pause",
+          "ms": 500
         },
         {
           "type": "ask_user",
           "kind": "captcha",
           "prompt": {
-            "en": "Please read the letters in the picture.",
-            "hi": "कृपया तस्वीर में लिखे अक्षर पढ़कर बताइए।"
+            "en": "Please read what is written in the picture.",
+            "hi": "कृपया तस्वीर में जो लिखा है, वह पढ़कर बताइए।"
           },
           "screenshot_locator": {
-            "role": "img",
-            "name": "Captcha image"
+            "css": "#CaptchaImgID"
           },
           "fill_locator": {
-            "label": "Enter the characters shown"
+            "css": "#inputCaptcha"
           }
         },
         {
           "type": "click",
           "locator": {
-            "role": "button",
-            "name": "Get Status"
+            "css": "#submitPnrNo"
           }
         },
         {
           "type": "wait_for",
           "locator": {
-            "css": "#result:not(.hidden), #error:not(.hidden)"
+            "css": "table:has(th:has-text('Booking Status')) td, #errorMessagediv:visible"
           },
-          "timeout_ms": 20000
+          "timeout_ms": 30000
         },
         {
           "type": "if_exists",
           "locator": {
-            "text": "Invalid captcha"
+            "css": "#errorMessagediv:has-text('aptcha')",
+            "visible": true
           },
           "timeout_ms": 0,
           "then": [
             {
               "type": "fail",
               "message": {
-                "en": "The letters did not match again. Please try later.",
-                "hi": "अक्षर फिर से मेल नहीं खाए। कृपया बाद में कोशिश करें।"
+                "en": "It did not match again. Please try later.",
+                "hi": "यह फिर से मेल नहीं खाया। कृपया बाद में कोशिश करें।"
               }
             }
           ]
@@ -179,15 +200,16 @@
     {
       "type": "if_exists",
       "locator": {
-        "text": "PNR not found"
+        "css": "#errorMessagediv",
+        "visible": true
       },
       "timeout_ms": 0,
       "then": [
         {
           "type": "fail",
           "message": {
-            "en": "This PNR was not found. Please check the number on your ticket.",
-            "hi": "यह PNR नहीं मिला। कृपया टिकट पर लिखा नंबर जाँच लें।"
+            "en": "The website could not find this PNR. Please check the number on your ticket.",
+            "hi": "वेबसाइट को यह PNR नहीं मिला। कृपया टिकट पर लिखा नंबर जाँच लें।"
           }
         }
       ]
@@ -199,34 +221,56 @@
     },
     {
       "type": "extract",
+      "as": "table",
       "locator": {
-        "css": "#train"
+        "css": "table:has(th:text-is('Train Number'))"
       },
-      "into": "train"
-    },
-    {
-      "type": "extract",
-      "locator": {
-        "test_id": "chart"
-      },
-      "into": "chart"
+      "into": "journey",
+      "columns": [
+        "train_number",
+        "train_name",
+        "boarding_date",
+        "from",
+        "to",
+        "reserved_upto",
+        "boarding_point",
+        "class"
+      ]
     },
     {
       "type": "extract",
       "as": "table",
       "locator": {
-        "role": "table",
-        "name": "Passenger status"
+        "css": "table:has(th:has-text('Booking Status'))"
       },
-      "into": "passengers"
+      "into": "passengers",
+      "columns": [
+        "passenger",
+        "booking_status",
+        "current_status"
+      ]
+    },
+    {
+      "type": "extract",
+      "as": "table",
+      "locator": {
+        "css": "table:has(th:text-is('Charting Status'))"
+      },
+      "into": "fare",
+      "columns": [
+        "total_fare",
+        "charting_status",
+        "remarks",
+        "train_status"
+      ]
     },
     {
       "type": "screenshot"
     }
   ],
   "result_template": {
-    "en": "Train {{train}}. {{#passengers}}Passenger {{@n}}: {{current_status}}. {{/passengers}}{{chart}}.",
-    "hi": "ट्रेन {{train}}। {{#passengers}}यात्री {{@n}}: {{current_status}}। {{/passengers}}{{chart}}।"
+    "en": "{{#journey}}Train {{train_number}} {{train_name}}, {{boarding_date}}. {{/journey}}{{#passengers}}Passenger {{@n}}: {{current_status}}. {{/passengers}}{{#fare}}{{charting_status}}.{{/fare}}",
+    "hi": "{{#journey}}ट्रेन {{train_number}} {{train_name}}, {{boarding_date}}। {{/journey}}{{#passengers}}यात्री {{@n}}: {{current_status}}। {{/passengers}}{{#fare}}{{charting_status}}।{{/fare}}"
   },
   "confirm_template": {
     "en": "You want to check the status of PNR {{pnr}}?",
@@ -236,5 +280,6 @@
     "captcha"
   ],
   "verified_at": null,
-  "enabled": true
+  "enabled": true,
+  "notes": "TODO(verify): https://www.indianrail.gov.in/enquiry/PNR/PnrEnquiry.html was recorded on 2026-10-24 up to the PNR box (#inputPnrNo, 'Enter PNR No.') and the Submit button (#modal1), and the result tables were seen. The site then returned 502s, so the CAPTCHA modal selectors (#CaptchaImgID, #inputCaptcha, #submitPnrNo) and the error box (#errorMessagediv) are not yet verified. Re-run scripts/record_flow.py verify pnr_status --live. The CAPTCHA is always handed to the user."
 }

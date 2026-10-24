@@ -136,6 +136,9 @@ def validate_flow(data: dict[str, Any] | FlowDefinition) -> FlowDefinition:
             errors.append(f"params.{p.name}: enum needs options")
 
     known = set(names) | BUILTIN_VARS
+    for p in flow.params:
+        if p.type == "enum":
+            known |= {f"{p.name}_label", f"{p.name}_label_hi"}
     asks: set[str] = set()
     _walk(flow.steps, known, False, "steps", errors, asks)
     for kind in ("captcha", "otp"):

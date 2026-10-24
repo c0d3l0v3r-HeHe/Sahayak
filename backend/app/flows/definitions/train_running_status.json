@@ -1,6 +1,6 @@
 {
   "id": "train_running_status",
-  "version": 1,
+  "version": 2,
   "title": {
     "en": "Where is my train?",
     "hi": "मेरी ट्रेन कहाँ है?"
@@ -68,7 +68,8 @@
     },
     {
       "type": "goto",
-      "url": "{{base}}/"
+      "url": "{{base}}/",
+      "timeout_ms": 45000
     },
     {
       "type": "narrate",
@@ -78,35 +79,23 @@
     {
       "type": "fill",
       "locator": {
-        "label": "Train Number"
+        "role": "textbox",
+        "name": "Train No./Name"
       },
-      "value": "{{train_no}}"
-    },
-    {
-      "type": "select",
-      "locator": {
-        "label": "Journey Date"
-      },
-      "value": "{{date}}"
-    },
-    {
-      "type": "click",
-      "locator": {
-        "role": "button",
-        "name": "Get Status"
-      }
+      "value": "{{train_no}}",
+      "typing_delay_ms": 120
     },
     {
       "type": "wait_for",
       "locator": {
-        "css": "#status:not(.hidden), #error:not(.hidden)"
+        "css": "h3:has-text('{{train_no}}'), h4:has-text('Invalid Train No')"
       },
-      "timeout_ms": 20000
+      "timeout_ms": 25000
     },
     {
       "type": "if_exists",
       "locator": {
-        "role": "alert"
+        "text": "Invalid Train No."
       },
       "timeout_ms": 0,
       "then": [
@@ -120,65 +109,84 @@
       ]
     },
     {
+      "type": "if_exists",
+      "locator": {
+        "role": "tab",
+        "name": "{{date|date:%d-%b-%Y}}",
+        "exact": true
+      },
+      "timeout_ms": 3000,
+      "then": [
+        {
+          "type": "click",
+          "locator": {
+            "role": "tab",
+            "name": "{{date|date:%d-%b-%Y}}",
+            "exact": true
+          }
+        }
+      ],
+      "else": [
+        {
+          "type": "fail",
+          "message": {
+            "en": "I can only check trains that started in the last few days.",
+            "hi": "मैं सिर्फ़ पिछले कुछ दिनों में चली ट्रेनों की स्थिति देख सकता हूँ।"
+          }
+        }
+      ]
+    },
+    {
+      "type": "pause",
+      "ms": 800
+    },
+    {
       "type": "narrate",
       "en": "Reading the train's status.",
       "hi": "ट्रेन की स्थिति पढ़ रहे हैं।"
     },
     {
+      "type": "wait_for",
+      "locator": {
+        "css": "[role=tabpanel].active h6"
+      },
+      "timeout_ms": 20000
+    },
+    {
       "type": "extract",
       "locator": {
-        "css": "#train-name"
+        "css": "h3:has-text('{{train_no}}')"
       },
       "into": "train_name"
     },
     {
       "type": "extract",
       "locator": {
-        "test_id": "last-station"
+        "css": "[role=tabpanel].active h6"
       },
-      "into": "last_station"
+      "into": "status"
     },
     {
       "type": "extract",
       "locator": {
-        "test_id": "last-event"
+        "css": "[role=tabpanel].active h4"
       },
-      "into": "last_event"
-    },
-    {
-      "type": "extract",
-      "locator": {
-        "test_id": "delay"
-      },
-      "into": "delay"
-    },
-    {
-      "type": "extract",
-      "locator": {
-        "test_id": "destination"
-      },
-      "into": "destination"
-    },
-    {
-      "type": "extract",
-      "locator": {
-        "test_id": "expected-arrival"
-      },
-      "into": "expected_arrival"
+      "into": "start"
     },
     {
       "type": "screenshot"
     }
   ],
   "result_template": {
-    "en": "{{train_name}}: {{last_event}}. Delay: {{delay}}. Expected at {{destination}}: {{expected_arrival}}.",
-    "hi": "{{train_name}}: आखिरी स्टेशन {{last_station}}। देरी: {{delay}}। {{destination}} पहुँचने का समय: {{expected_arrival}}।"
+    "en": "{{train_name}}: {{status}}.",
+    "hi": "ट्रेन {{train_name}}: {{status}}।"
   },
   "confirm_template": {
     "en": "You want to know where train {{train_no}} is (started {{date}})?",
     "hi": "आप ट्रेन {{train_no}} की स्थिति जानना चाहते हैं ({{date}} चली)?"
   },
   "requires": [],
-  "verified_at": null,
-  "enabled": true
+  "verified_at": "2026-10-24T10:33:17+00:00",
+  "enabled": true,
+  "notes": "Live selectors recorded on 2026-10-24 against https://enquiry.indianrail.gov.in/mntes/ (Spot Your Train). The train box reacts to key presses, so the number is typed key by key. Start dates appear as tabs named like 23-Oct-2026; the status sentence is the h6 in the active tab panel."
 }

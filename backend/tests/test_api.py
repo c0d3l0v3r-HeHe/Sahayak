@@ -23,7 +23,9 @@ async def test_auth_required(client):
 
 
 async def test_list_flows(client):
-    flows = (await client.get("/v1/flows")).json()["flows"]
+    body = (await client.get("/v1/flows")).json()
+    assert body["demo_mode"] is True
+    flows = body["flows"]
     ids = {f["id"] for f in flows}
     assert ids == {"scheme_finder", "train_running_status", "pnr_status"}
     pnr = next(f for f in flows if f["id"] == "pnr_status")

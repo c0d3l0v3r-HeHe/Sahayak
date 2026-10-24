@@ -49,3 +49,10 @@ def test_variables():
 
 def test_mask_short():
     assert mask("12") == "••"
+
+
+def test_filters_with_digits_in_name():
+    assert render("{{a|range10}}", {"a": "67"}) == "61 - 70"
+    assert render("{{a|range10}}", {"a": "7"}) == "0 - 10"
+    assert render("{{a|range10}}", {"a": "120"}) == "101 - 110"
+    assert render("₹{{a|inr}}", {"a": "1250000"}) == "₹12,50,000"

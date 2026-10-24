@@ -75,11 +75,28 @@ async def test_train_running_status(client, auth, worker):
     task = await wait_for(client, auth, task_id, TERMINAL)
     assert task["status"] == "succeeded", task["events"][-3:]
     data = task["result"]["data"]
-    assert data["train_name"].startswith("12301 Howrah Rajdhani")
-    assert data["destination"] == "New Delhi"
-    assert data["delay"] and data["expected_arrival"] and data["last_station"]
-    assert "Delay:" in task["result"]["text"]["en"]
-    assert "देरी" in task["result"]["text"]["hi"]
+    assert data["train_name"] == "12301 RAJDHANI EXPRES"
+    assert data["start"].startswith("Start Date :")
+    assert data["status"]
+    assert task["result"]["text"]["en"] == f"12301 RAJDHANI EXPRES: {data['status']}."
+    assert task["result"]["text"]["hi"].startswith("ट्रेन 12301")
+
+
+async def test_train_yesterday_reached(client, auth, worker):
+    task_id = await start(
+        client, auth, "train_running_status", {"train_no": "12301", "date": "yesterday"}
+    )
+    task = await wait_for(client, auth, task_id, TERMINAL)
+    assert task["status"] == "succeeded", task["events"][-3:]
+    assert task["result"]["data"]["status"].startswith("Arrived at NEW DELHI(NDLS)")
+
+
+async def test_train_date_too_old(client, auth, worker):
+    task_id = await start(
+        client, auth, "train_running_status", {"train_no": "12301", "date": "2020-01-01"}
+    )
+    task = await wait_for(client, auth, task_id, TERMINAL)
+    assert task["status"] == "failed" and "last few days" in task["error"]["en"]
 
 
 async def test_train_not_found(client, auth, worker):
@@ -114,7 +131,8 @@ async def test_pnr_with_captcha_handoff(client, auth, worker, db):
     assert task["status"] == "succeeded", task["events"][-3:]
     passengers = task["result"]["data"]["passengers"]
     assert passengers and set(passengers[0]) == {"passenger", "booking_status", "current_status"}
-    assert "Passenger 1:" in task["result"]["text"]["en"]
+    text = task["result"]["text"]["en"]
+    assert text.startswith("Train 12") and "Passenger 1:" in text and "Chart Not Prepared" in text
     types = event_types(task)
     assert "handoff_required" in types and "handoff_resolved" in types
     statuses = [e["status"] for e in task["events"] if e["type"] == "status"]
@@ -163,4 +181,4 @@ async def test_pnr_not_found(client, auth, worker):
     task_id = await start(client, auth, "pnr_status", {"pnr": "0123456789"})
     await answer_captcha(client, auth, task_id, "K7PQR")
     task = await wait_for(client, auth, task_id, TERMINAL)
-    assert task["status"] == "failed" and "not found" in task["error"]["en"]
+    assert task["status"] == "failed" and "could not find this PNR" in task["error"]["en"]

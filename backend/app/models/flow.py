@@ -24,6 +24,7 @@ class Locator(_Strict):
     css: str | None = None
     exact: bool = False
     nth: int | None = None
+    visible: bool = False  # only match visible elements (sites often render hidden duplicates)
 
     @model_validator(mode="after")
     def _one_strategy(self) -> "Locator":
@@ -61,6 +62,21 @@ class FillStep(_Step):
     type: Literal["fill"]
     locator: Locator
     value: str
+    # Type key by key (for inputs that react to key events, e.g. autocomplete boxes)
+    typing_delay_ms: int | None = Field(default=None, ge=0, le=1000)
+
+
+class PressStep(_Step):
+    type: Literal["press"]
+    locator: Locator
+    key: str = Field(pattern=r"^[A-Za-z0-9+]+$")  # e.g. Enter, Tab, ArrowDown
+
+
+class PauseStep(_Strict):
+    """Let a page settle (animations, debounced filters). Max 10 s."""
+
+    type: Literal["pause"]
+    ms: int = Field(ge=0, le=10000)
 
 
 class ClickStep(_Step):
@@ -69,6 +85,7 @@ class ClickStep(_Step):
     # Mark clicks that change state on the website (submit an application, payment...).
     # The validator requires a preceding `ask_user kind=confirm`.
     changes_state: bool = False
+    force: bool = False  # click even if an overlay covers the element (custom dropdowns)
 
 
 class SelectStep(_Step):
@@ -90,6 +107,7 @@ class ExtractStep(_Step):
     into: str = Field(pattern=r"^[a-z_][a-z0-9_]*$")
     attribute: str | None = None  # for as=attribute
     fields: dict[str, FieldSpec] | None = None  # for as=list
+    columns: list[str] | None = None  # for as=table: rename columns by position
     limit: int | None = Field(default=None, ge=1, le=100)
 
     @model_validator(mode="after")
@@ -154,7 +172,9 @@ Step = Annotated[
     | IfExistsStep
     | AssertStep
     | NarrateStep
-    | FailStep,
+    | FailStep
+    | PressStep
+    | PauseStep,
     Field(discriminator="type"),
 ]
 IfExistsStep.model_rebuild()
@@ -181,6 +201,11 @@ class FlowParam(_Strict):
     sensitive: bool = False  # masked in task history and logs
 
 
+class Viewport(_Strict):
+    width: int = Field(ge=320, le=1920)
+    height: int = Field(ge=480, le=1400)
+
+
 class FlowDefinition(_Strict):
     id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
     version: int = Field(ge=1)
@@ -201,6 +226,8 @@ class FlowDefinition(_Strict):
     examples: list[str] = Field(default_factory=list)  # sample utterances (also for LLM prompts)
     # Optional natural-language goal for goal-based engines (TinyFish). Ignored by Playwright.
     goal: str | None = None
+    viewport: Viewport | None = None  # default is a phone-sized viewport
+    notes: str | None = None  # for maintainers: verification status, known quirks, TODOs
 
     def param(self, name: str) -> FlowParam | None:
         return next((p for p in self.params if p.name == name), None)

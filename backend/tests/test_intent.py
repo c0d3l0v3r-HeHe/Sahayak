@@ -59,7 +59,7 @@ UTTERANCES = [
         "mujhe pension yojana batao, meri umar 65 saal hai, main bihar se hoon",
         "scheme_finder",
         {"age": "65", "state": "bihar"},
-        ["gender", "income"],
+        ["gender"],  # income is optional: live myScheme search cannot filter by it
     ),
     (
         "मैं 70 साल की महिला हूँ, उत्तर प्रदेश में रहती हूँ, आमदनी 1 लाख, कोई योजना बताओ",
@@ -139,12 +139,14 @@ async def test_follow_up_answer_fills_expected_param(rules_service):
         "mahila", "hi", flow_id="scheme_finder", known=second["params"], expecting="gender"
     )
     assert third["params"]["gender"] == "female"
-    assert third["missing_params"] == ["income"]
+    assert third["missing_params"] == [] and third["confirmation"]
+    assert "आमदनी" not in third["confirmation"]["hi"]  # optional income left out
     fourth = await rules_service.parse(
         "डेढ़ नहीं, 150000", "hi", flow_id="scheme_finder", known=third["params"],
         expecting="income",
     )  # fmt: skip
-    assert fourth["missing_params"] == [] and fourth["confirmation"]
+    assert fourth["params"]["income"] == "150000"
+    assert "₹1,50,000" in fourth["confirmation"]["en"]
 
 
 async def test_invalid_values_reported(rules_service):

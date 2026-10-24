@@ -90,12 +90,15 @@ def _pnr_result(pnr: str) -> dict:
     day = 1 + (h >> 40) % 28
     return {
         "pnr": pnr,
+        "train_number": number,
+        "train_name": name.upper(),
         "train": f"{number} - {name}",
+        "fare": str(500 + h % 3000),
         "from": src,
         "to": dst,
         "date": f"{day:02d}-11-2026",
         "class": cls,
-        "chart": "Chart not prepared",
+        "chart": "Chart Not Prepared",
         "passengers": passengers,
     }
 
@@ -111,7 +114,7 @@ def create_mock_app(settings: Settings) -> FastAPI:
     async def index() -> RedirectResponse:
         return RedirectResponse("index.html")
 
-    @app.get("/pnr/captcha.svg")
+    @app.get("/pnr/PNR/captcha.svg")
     async def captcha(request: Request) -> Response:
         sid = _sid(request)
         code = settings.mock_captcha_code or "".join(secrets.choice(ALPHABET) for _ in range(5))
@@ -127,7 +130,7 @@ def create_mock_app(settings: Settings) -> FastAPI:
         resp.set_cookie(COOKIE, sid, httponly=True, samesite="lax")
         return resp
 
-    @app.post("/pnr/api/status")
+    @app.post("/pnr/PNR/api/status")
     async def pnr_status(body: PnrQuery, request: Request) -> JSONResponse:
         sid = request.cookies.get(COOKIE, "")
         expected = sessions.pop(sid, None)  # a CAPTCHA can be tried only once

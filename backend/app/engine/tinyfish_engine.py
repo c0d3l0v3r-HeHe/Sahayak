@@ -35,8 +35,8 @@ class TinyFishEngine(BrowserEngine):
     async def stop(self) -> None:
         await self.fallback.stop()
 
-    async def new_session(self) -> BrowserSession:
-        return await self.fallback.new_session()
+    async def new_session(self, viewport: dict[str, int] | None = None) -> BrowserSession:
+        return await self.fallback.new_session(viewport)
 
     async def run_goal(self, url: str, goal: str, timeout_s: float = 180) -> dict[str, Any]:
         try:

@@ -1,6 +1,6 @@
 {
   "id": "scheme_finder",
-  "version": 1,
+  "version": 2,
   "title": {
     "en": "Find government schemes",
     "hi": "सरकारी योजनाएँ खोजें"
@@ -461,103 +461,158 @@
       "type": "int",
       "regex": "^\\d{1,9}$",
       "prompt": {
-        "en": "What is your family's yearly income in rupees?",
-        "hi": "आपके परिवार की सालाना आमदनी कितने रुपये है?"
+        "en": "What is your family's yearly income in rupees? (optional)",
+        "hi": "आपके परिवार की सालाना आमदनी कितने रुपये है? (ज़रूरी नहीं)"
       },
-      "example": "120000"
+      "example": "120000",
+      "required": false
     }
   ],
   "steps": [
     {
       "type": "narrate",
-      "en": "Opening the scheme finder website.",
-      "hi": "योजना खोजने वाली वेबसाइट खोल रहे हैं।"
+      "en": "Opening the myScheme website.",
+      "hi": "myScheme वेबसाइट खोल रहे हैं।"
     },
     {
       "type": "goto",
-      "url": "{{base}}/"
-    },
-    {
-      "type": "narrate",
-      "en": "Filling in your details.",
-      "hi": "आपकी जानकारी भर रहे हैं।"
-    },
-    {
-      "type": "click",
-      "locator": {
-        "role": "radio",
-        "name": "{{gender|title}}",
-        "exact": true
-      }
-    },
-    {
-      "type": "fill",
-      "locator": {
-        "label": "Age"
-      },
-      "value": "{{age}}"
-    },
-    {
-      "type": "select",
-      "locator": {
-        "label": "State"
-      },
-      "value": "{{state}}"
-    },
-    {
-      "type": "fill",
-      "locator": {
-        "label": "Annual family income (₹)"
-      },
-      "value": "{{income}}"
-    },
-    {
-      "type": "narrate",
-      "en": "Searching for schemes.",
-      "hi": "योजनाएँ खोज रहे हैं।"
-    },
-    {
-      "type": "click",
-      "locator": {
-        "role": "button",
-        "name": "Find schemes"
-      }
+      "url": "{{base}}/search",
+      "timeout_ms": 45000
     },
     {
       "type": "wait_for",
       "locator": {
-        "css": "#results:not(.hidden)"
+        "css": "[role=article]"
       },
-      "timeout_ms": 20000
+      "timeout_ms": 30000
     },
     {
       "type": "narrate",
-      "en": "Reading the results.",
-      "hi": "नतीजे पढ़ रहे हैं।"
+      "en": "Choosing gender: {{gender_label}}.",
+      "hi": "लिंग चुन रहे हैं: {{gender_label_hi}}।"
+    },
+    {
+      "type": "click",
+      "locator": {
+        "css": "span:text-is('Gender')",
+        "visible": true
+      }
+    },
+    {
+      "type": "pause",
+      "ms": 600
+    },
+    {
+      "type": "click",
+      "locator": {
+        "css": "input[type=checkbox][aria-labelledby='{{gender_label}}']",
+        "visible": true
+      }
+    },
+    {
+      "type": "pause",
+      "ms": 1500
+    },
+    {
+      "type": "narrate",
+      "en": "Choosing state: {{state_label}}.",
+      "hi": "राज्य चुन रहे हैं: {{state_label_hi}}।"
+    },
+    {
+      "type": "click",
+      "locator": {
+        "css": "#facet-beneficiaryState-input",
+        "visible": true
+      },
+      "force": true
+    },
+    {
+      "type": "fill",
+      "locator": {
+        "css": "#facet-beneficiaryState-input",
+        "visible": true
+      },
+      "value": "{{state_label}}",
+      "typing_delay_ms": 60
+    },
+    {
+      "type": "pause",
+      "ms": 1000
+    },
+    {
+      "type": "press",
+      "locator": {
+        "css": "#facet-beneficiaryState-input",
+        "visible": true
+      },
+      "key": "Enter"
+    },
+    {
+      "type": "pause",
+      "ms": 1500
+    },
+    {
+      "type": "narrate",
+      "en": "Choosing age group {{age|range10}}.",
+      "hi": "उम्र का समूह चुन रहे हैं: {{age|range10}}।"
+    },
+    {
+      "type": "click",
+      "locator": {
+        "css": "div.facet__control:has(#facet-age-general-input)",
+        "visible": true
+      }
+    },
+    {
+      "type": "pause",
+      "ms": 800
+    },
+    {
+      "type": "click",
+      "locator": {
+        "css": "[class*=facet__option]:text-is('{{age|range10}}')",
+        "visible": true
+      }
+    },
+    {
+      "type": "pause",
+      "ms": 2500
+    },
+    {
+      "type": "narrate",
+      "en": "Reading the schemes found.",
+      "hi": "मिली हुई योजनाएँ पढ़ रहे हैं।"
+    },
+    {
+      "type": "wait_for",
+      "locator": {
+        "css": "[role=article]"
+      },
+      "timeout_ms": 30000
     },
     {
       "type": "extract",
       "as": "list",
       "locator": {
-        "css": "#scheme-list > li"
+        "css": "[role=article]"
       },
       "into": "schemes",
       "limit": 5,
       "fields": {
         "name": {
           "locator": {
-            "role": "link"
+            "css": "h2 a"
           }
         },
         "link": {
           "locator": {
-            "role": "link"
+            "css": "h2 a"
           },
           "attribute": "href"
         },
         "benefit": {
           "locator": {
-            "css": ".benefit"
+            "css": "span[aria-label^='Brief description']"
           }
         }
       }
@@ -571,10 +626,15 @@
     "hi": "{{^schemes}}आपके लिए कोई योजना नहीं मिली। आप दूसरी जानकारी के साथ फिर कोशिश कर सकते हैं।{{/schemes}}{{#schemes}}{{@n}}. {{name}} — {{benefit}}\n{{/schemes}}"
   },
   "confirm_template": {
-    "en": "Shall I look for schemes for a {{age}}-year-old, {{gender}}, living in {{state}}, with a yearly family income of ₹{{income|inr}}?",
-    "hi": "क्या मैं आपके लिए योजनाएँ खोजूँ? उम्र {{age}} साल, {{gender}}, राज्य {{state}}, परिवार की सालाना आमदनी ₹{{income|inr}}।"
+    "en": "Shall I look for schemes for a {{age}}-year-old, {{gender}}, living in {{state}}{{#income}}, with a yearly family income of ₹{{income|inr}}{{/income}}?",
+    "hi": "क्या मैं आपके लिए योजनाएँ खोजूँ? उम्र {{age}} साल, {{gender}}, राज्य {{state}}{{#income}}, परिवार की सालाना आमदनी ₹{{income|inr}}{{/income}}।"
   },
   "requires": [],
-  "verified_at": null,
-  "enabled": true
+  "verified_at": "2026-10-24T10:33:17+00:00",
+  "enabled": true,
+  "viewport": {
+    "width": 1280,
+    "height": 900
+  },
+  "notes": "Live selectors recorded on 2026-10-24 against https://www.myscheme.gov.in/search (filter sidebar: Gender checkboxes, State/UT and Age react-selects). The live search has no income filter, so income is optional and only shown in the confirmation. Desktop viewport is required: on phones the filters live in a drawer."
 }

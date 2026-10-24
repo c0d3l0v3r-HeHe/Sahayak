@@ -1,7 +1,7 @@
 """Tiny template language for flow values and result messages.
 
 {{pnr}}                     variable
-{{date|date:%d-%m-%Y}}      filters: date, upper, lower, mask, default, title
+{{date|date:%d-%m-%Y}}      filters: date, upper, lower, mask, default, title, inr, range10
 {{#schemes}}..{{/schemes}}  repeat for each item of a list (item fields in scope, {{@n}} = 1-based index)
 {{^schemes}}..{{/schemes}}  render only if the list is empty / missing
 """
@@ -10,7 +10,7 @@ import re
 from datetime import date, datetime
 from typing import Any
 
-_VAR = re.compile(r"\{\{\s*([@a-zA-Z_][\w.]*|\.)((?:\s*\|\s*[a-z_]+(?::[^}|]*)?)*)\s*\}\}")
+_VAR = re.compile(r"\{\{\s*([@a-zA-Z_][\w.]*|\.)((?:\s*\|\s*[a-z_][a-z0-9_]*(?::[^}|]*)?)*)\s*\}\}")
 _SECTION = re.compile(r"\{\{([#^])\s*([a-zA-Z_][\w.]*)\s*\}\}(.*?)\{\{/\s*\2\s*\}\}", re.S)
 
 
@@ -79,6 +79,14 @@ def _apply_filter(value: Any, name: str, arg: str | None) -> Any:
                 groups.insert(0, head[-2:])
                 head = head[:-2]
             return ",".join([head, *groups, tail]) if head else ",".join([*groups, tail])
+        case "range10":  # age bucket used by filters: 67 -> "61 - 70", 7 -> "0 - 10"
+            if value in (None, ""):
+                return ""
+            n = min(int(value), 110)  # the last bucket on myScheme is "101 - 110"
+            if n <= 10:
+                return "0 - 10"
+            lo = (n - 1) // 10 * 10 + 1
+            return f"{lo} - {lo + 9}"
         case "default":
             return arg if value in (None, "") else value
         case "date":

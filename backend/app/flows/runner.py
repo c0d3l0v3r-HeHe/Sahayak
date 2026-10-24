@@ -28,6 +28,8 @@ from app.models.flow import (
     IfExistsStep,
     Locator,
     NarrateStep,
+    PauseStep,
+    PressStep,
     ScreenshotStep,
     SelectStep,
     Step,
@@ -131,6 +133,13 @@ class FlowRunner:
             "today": local_today().isoformat(),
             "lang": self.cfg.lang,
         }
+        # enum params also expose their English label, e.g. {{gender_label}} -> "Female"
+        for p in flow.params:
+            if p.type == "enum" and p.name in params:
+                opt = next((o for o in p.options or [] if o.value == params[p.name]), None)
+                if opt:
+                    variables[f"{p.name}_label"] = opt.label.en
+                    variables[f"{p.name}_label_hi"] = opt.label.hi
         extracted: dict[str, Any] = {}
 
         run_goal = getattr(self.engine, "run_goal", None)
@@ -144,7 +153,8 @@ class FlowRunner:
                 raise FlowFailed(MSG_SITE_DOWN, str(exc)) from exc
             extracted.update(data)
         else:
-            session = await self.engine.new_session()
+            viewport = flow.viewport.model_dump() if flow.viewport else None
+            session = await self.engine.new_session(viewport)
             try:
                 await self._steps(flow.steps, session, variables, extracted, ctx)
             finally:
@@ -230,8 +240,18 @@ class FlowRunner:
                 value = render(step.value, scope)
                 await self._pause()
                 await self._retry(
-                    "fill", lambda: session.fill(step.locator, value, step.timeout_ms)
+                    "fill",
+                    lambda: session.fill(
+                        step.locator, value, step.timeout_ms, step.typing_delay_ms
+                    ),
                 )
+            case PressStep():
+                await self._pause()
+                await self._retry(
+                    "press", lambda: session.press(step.locator, step.key, step.timeout_ms)
+                )
+            case PauseStep():
+                await asyncio.sleep(step.ms / 1000)
             case SelectStep():
                 value = render(step.value, scope)
                 await self._pause()
@@ -240,7 +260,9 @@ class FlowRunner:
                 )
             case ClickStep():
                 await self._pause()
-                await self._retry("click", lambda: session.click(step.locator, step.timeout_ms))
+                await self._retry(
+                    "click", lambda: session.click(step.locator, step.timeout_ms, step.force)
+                )
                 await self._snap(session, ctx)
             case WaitForStep():
                 await self._retry(
@@ -286,6 +308,8 @@ class FlowRunner:
                 return await session.attribute(step.locator, step.attribute or "", step.timeout_ms)
             case "table":
                 rows = await session.table(step.locator, step.timeout_ms)
+                if step.columns:
+                    rows = [dict(zip(step.columns, r.values(), strict=False)) for r in rows]
                 return rows[: step.limit] if step.limit else rows
             case "list":
                 return await session.items(

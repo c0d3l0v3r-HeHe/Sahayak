@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PNR enquiry — demo replica</title><link rel="stylesheet" href="../../common.css">
+<style>
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); align-items: center; justify-content: center; z-index: 10; }
+  .modal.show { display: flex; }
+  .modal-content { background: #fff; border-radius: 8px; padding: 20px; width: min(360px, 92vw); }
+  #errorMessagediv { display: none; } #errorMessagediv.show { display: block; }
+  #journeyRow, #resultArea { display: none; } #resultArea.show { display: block; }
+  .table-wrap { overflow-x: auto; }
+</style></head>
+<body>
+<div class="demo-banner">Sahayak demo replica of a PNR enquiry page — not a railway website. Status is simulated.</div>
+<header class="site"><h1>INDIAN RAILWAYS PASSENGER RESERVATION ENQUIRY (demo)</h1></header>
+<main>
+  <h3>Passenger Current Status Enquiry</h3>
+  <div id="errorMessagediv" class="alert" role="alert"><strong>ERROR!</strong> <span id="errorMsg"></span></div>
+  <div class="card">
+    <h4 style="font-weight:400">Enter the PNR for your booking below to get the current status. You will find it on the top left corner of the ticket.</h4>
+    <label for="inputPnrNo">Enter PNR No.</label>
+    <input type="text" id="inputPnrNo" maxlength="10" placeholder="Enter PNR No." inputmode="numeric"
+           onkeypress="return ((event.charCode >= 48 && event.charCode <= 57) || event.charCode == 0)">
+    <button type="button" id="modal1">Submit</button>
+  </div>
+
+  <div class="modal" id="captchaModal" role="dialog" aria-label="Captcha">
+    <div class="modal-content">
+      <p>Type the characters you see in the image.</p>
+      <img id="CaptchaImgID" alt="Captcha" width="200" height="64">
+      <input type="text" id="inputCaptcha" placeholder="Enter Captcha" autocomplete="off" maxlength="8">
+      <button type="button" id="submitPnrNo">Submit</button>
+    </div>
+  </div>
+
+  <section id="resultArea" class="card" aria-label="PNR result">
+    <h4 id="queried">You Queried For : PNR Number:</h4>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Train Number</th><th>Train Name</th><th>Boarding Date (DD-MM-YYYY)</th><th>From</th><th>To</th><th>Reserved Upto</th><th>Boarding Point</th><th>Class</th></tr></thead>
+      <tbody id="journeyBody"></tbody></table></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>S. No.</th><th>Booking Status (Coach No , Berth No., Quota)</th><th>*Current Status (Coach No , Berth No.)</th></tr></thead>
+      <tbody id="passengerBody"></tbody></table></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Total Fare</th><th>Charting Status</th><th>Remarks if any</th><th>Train Status</th></tr></thead>
+      <tbody id="fareBody"></tbody></table></div>
+  </section>
+</main>
+<script>
+const modal = document.getElementById("captchaModal"), err = document.getElementById("errorMessagediv");
+function showError(msg) { document.getElementById("errorMsg").textContent = msg; err.classList.add("show"); }
+document.getElementById("modal1").addEventListener("click", () => {
+  err.classList.remove("show");
+  if (!/^\d{10}$/.test(document.getElementById("inputPnrNo").value)) { showError("Please Enter Valid PNR No."); return; }
+  document.getElementById("CaptchaImgID").src = "captcha.svg?t=" + Date.now();
+  document.getElementById("inputCaptcha").value = "";
+  modal.classList.add("show");
+});
+function row(body, cells) { const tr = document.createElement("tr"); for (const c of cells) { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); } body.appendChild(tr); }
+document.getElementById("submitPnrNo").addEventListener("click", async () => {
+  const pnr = document.getElementById("inputPnrNo").value;
+  const resp = await fetch("api/status", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pnr, captcha: document.getElementById("inputCaptcha").value }) });
+  const data = await resp.json();
+  modal.classList.remove("show");
+  document.getElementById("resultArea").classList.remove("show");
+  if (!resp.ok) { showError(data.error === "captcha" ? "Captcha not matched" : "FLUSHED PNR / PNR NOT YET GENERATED"); return; }
+  document.getElementById("queried").textContent = "You Queried For : PNR Number: " + data.pnr;
+  for (const id of ["journeyBody", "passengerBody", "fareBody"]) document.getElementById(id).innerHTML = "";
+  row(document.getElementById("journeyBody"), [data.train_number, data.train_name, data.date, data.from, data.to, data.to, data.from, data.class]);
+  data.passengers.forEach((p, i) => row(document.getElementById("passengerBody"), [`Passenger ${i + 1}`, p.booking_status, p.current_status]));
+  row(document.getElementById("fareBody"), [data.fare, data.chart, "", "Train is scheduled"]);
+  document.getElementById("resultArea").classList.add("show");
+});
+</script>
+</body></html>

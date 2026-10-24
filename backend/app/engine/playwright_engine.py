@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import re
-from typing import Any
+from typing import Any, cast
 
 from playwright.async_api import Browser, BrowserContext, Page, Playwright, async_playwright
 from playwright.async_api import Error as PlaywrightError
@@ -36,6 +36,8 @@ def resolve(root: Page | PWLocator, loc: Locator) -> PWLocator:
         result = root.get_by_test_id(loc.test_id)
     else:
         result = root.locator(loc.css or "")
+    if loc.visible:
+        result = result.filter(visible=True)
     if loc.nth is not None:
         result = result.nth(loc.nth)
     return result
@@ -65,15 +67,31 @@ class PlaywrightSession(BrowserSession):
         except (PWTimeout, PlaywrightError) as exc:
             raise TransientError(f"could not open {url}: {exc}") from exc
 
-    async def fill(self, locator: Locator, value: str, timeout_ms: int) -> None:
+    async def fill(
+        self, locator: Locator, value: str, timeout_ms: int, typing_delay_ms: int | None = None
+    ) -> None:
         try:
-            await self._first(locator).fill(value, timeout=timeout_ms)
+            el = self._first(locator)
+            if typing_delay_ms is None:
+                await el.fill(value, timeout=timeout_ms)
+            else:
+                try:
+                    await el.fill("", timeout=2000)
+                except PlaywrightError:
+                    pass  # some custom inputs can't be cleared; they start empty anyway
+                await el.press_sequentially(value, delay=typing_delay_ms, timeout=timeout_ms)
         except (PWTimeout, PlaywrightError) as exc:
             raise _wrap(exc, "fill") from None  # never chain: the message could carry the value
 
-    async def click(self, locator: Locator, timeout_ms: int) -> None:
+    async def press(self, locator: Locator, key: str, timeout_ms: int) -> None:
         try:
-            await self._first(locator).click(timeout=timeout_ms)
+            await self._first(locator).press(key, timeout=timeout_ms)
+        except (PWTimeout, PlaywrightError) as exc:
+            raise _wrap(exc, "press") from exc
+
+    async def click(self, locator: Locator, timeout_ms: int, force: bool = False) -> None:
+        try:
+            await self._first(locator).click(timeout=timeout_ms, force=force)
         except (PWTimeout, PlaywrightError) as exc:
             raise _wrap(exc, "click") from exc
 
@@ -204,13 +222,16 @@ class PlaywrightEngine(BrowserEngine):
             await self._pw.stop()
             self._pw = None
 
-    async def new_session(self) -> BrowserSession:
+    async def new_session(self, viewport: dict[str, int] | None = None) -> BrowserSession:
         if not (self._browser and self._browser.is_connected()):
             await self.start()  # relaunch after a browser crash
         assert self._browser is not None
         ua = await self._default_user_agent()
         context = await self._browser.new_context(
-            viewport=VIEWPORT, locale="en-IN", timezone_id="Asia/Kolkata", user_agent=ua
+            viewport=cast(Any, viewport or VIEWPORT),
+            locale="en-IN",
+            timezone_id="Asia/Kolkata",
+            user_agent=ua,
         )
         page = await context.new_page()
         return PlaywrightSession(context, page)
