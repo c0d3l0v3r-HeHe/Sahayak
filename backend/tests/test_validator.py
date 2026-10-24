@@ -177,3 +177,14 @@ def test_json_files_roundtrip():
     for path in DEFINITIONS_DIR.glob("*.json"):
         data = json.loads(path.read_text(encoding="utf-8"))
         validate_flow(copy.deepcopy(data))
+
+
+def test_example_in_docs_is_valid():
+    """docs/adding-a-flow.md must stay correct."""
+    import re
+    from pathlib import Path
+
+    doc = (Path(__file__).parents[2] / "docs" / "adding-a-flow.md").read_text(encoding="utf-8")
+    block = re.search(r"```json\n(.*?)\n```", doc, re.S)
+    assert block is not None
+    assert validate_flow(json.loads(block.group(1))).id == "ration_card_status"

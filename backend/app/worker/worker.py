@@ -26,6 +26,7 @@ from app.models.task import TERMINAL, EventType, TaskStatus
 from app.queue.base import Job, JobQueue
 from app.queue.mongo_queue import MongoJobQueue
 from app.services.screens import ScreenStore
+from app.services.stats import StatsService
 from app.services.tasks import TaskService
 from app.worker.context import TaskRunContext
 from app.worker.pool import BrowserPool
@@ -73,6 +74,7 @@ class Worker:
         self.tasks = TaskService(db, settings.task_ttl_days)
         self.handoffs = HandoffService(db, settings.handoff_ttl_minutes)
         self.screens = ScreenStore(settings.screenshot_dir)
+        self.stats = StatsService(db)
         self.pool = BrowserPool(engine, settings.worker_concurrency, settings.per_site_concurrency)
         self.runner_config = RunnerConfig(
             demo_mode=settings.demo_mode,
@@ -144,6 +146,7 @@ class Worker:
         heartbeat = asyncio.create_task(self._heartbeat(job))
         try:
             await self._process(job)
+            await self._record_stats(job.task_id)
         except Exception:
             log.exception("unexpected error in task %s", job.task_id)
             await self.tasks.add_event(job.task_id, EventType.error, MSG_WORKER_LOST)
@@ -153,6 +156,12 @@ class Worker:
         finally:
             heartbeat.cancel()
             await self.queue.complete(job.id, self.id)
+
+    async def _record_stats(self, task_id: str) -> None:
+        task = await self.tasks.get(task_id)
+        flow = self.registry.get(task["flow_id"]) if task else None
+        if task and flow and TaskStatus(task["status"]) in TERMINAL:
+            await self.stats.record(flow, TaskStatus(task["status"]), task.get("started_at"))
 
     async def _process(self, job: Job) -> None:
         task = await self.tasks.get(job.task_id)

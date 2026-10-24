@@ -10,6 +10,7 @@ from app.api.deps import AppState, current_user, get_state, user_from_token
 from app.flows.validator import redacted_params, validate_params
 from app.handoff.service import InvalidAnswer
 from app.models.task import TERMINAL, HandoffAnswer, TaskStatus
+from app.services.stats import StatsService
 from app.services.tasks import public_task
 
 router = APIRouter(tags=["tasks"])
@@ -113,7 +114,10 @@ async def cancel_task(
         raise HTTPException(status.HTTP_409_CONFLICT, "task already finished")
     await state.tasks.request_cancel(task_id)
     if task["status"] == TaskStatus.queued.value:
-        await state.tasks.set_status(task_id, TaskStatus.cancelled)
+        if await state.tasks.set_status(task_id, TaskStatus.cancelled):
+            flow = state.registry.get(task["flow_id"])
+            if flow:
+                await StatsService(state.db).record(flow, TaskStatus.cancelled, None)
     await state.handoffs.cancel_for_task(task_id)
     return {"cancelled": True}
 

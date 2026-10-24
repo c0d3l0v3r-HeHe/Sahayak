@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import pytest
 
+from app.db.mongo import Database
 from app.models.common import utcnow
 from app.queue.mongo_queue import MongoJobQueue
 
@@ -11,8 +12,12 @@ pytestmark = pytest.mark.mongo
 
 @pytest.fixture
 async def queue(db):
-    await db.jobs.delete_many({})
-    return MongoJobQueue(db, claim_timeout_s=60, max_attempts=2)
+    # A separate database: the integration tests' worker polls the main `jobs` collection
+    # and would otherwise claim these fake jobs.
+    isolated = Database(client=db.client, db=db.client[f"{db.db.name}_queue"])
+    await isolated.jobs.delete_many({})
+    yield MongoJobQueue(isolated, claim_timeout_s=60, max_attempts=2)
+    await db.client.drop_database(f"{db.db.name}_queue")
 
 
 async def test_enqueue_and_claim(queue):
@@ -40,28 +45,28 @@ async def test_run_after_delays_job(queue):
     assert await queue.depth() == 1
 
 
-async def test_complete_removes_payload(queue, db):
+async def test_complete_removes_payload(queue):
     job_id = await queue.enqueue("t1", {"params": {"pnr": "4512345678"}})
     job = await queue.claim("w1")
     await queue.complete(job.id, "w1")
-    doc = await db.jobs.find_one({"_id": job_id})
+    doc = await queue.col.find_one({"_id": job_id})
     assert doc["state"] == "done" and "payload" not in doc
 
 
-async def test_stale_claim_is_requeued(queue, db):
+async def test_stale_claim_is_requeued(queue):
     job_id = await queue.enqueue("t1")
     await queue.claim("crashed-worker")
-    await db.jobs.update_one(
+    await queue.col.update_one(
         {"_id": job_id}, {"$set": {"claimed_at": utcnow() - timedelta(minutes=5)}}
     )
     job = await queue.claim("w2")
     assert job is not None and job.id == job_id and job.attempts == 2
 
 
-async def test_heartbeat_keeps_claim(queue, db):
+async def test_heartbeat_keeps_claim(queue):
     job_id = await queue.enqueue("t1")
     await queue.claim("w1")
-    await db.jobs.update_one(
+    await queue.col.update_one(
         {"_id": job_id}, {"$set": {"claimed_at": utcnow() - timedelta(minutes=5)}}
     )
     assert await queue.heartbeat(job_id, "w1")
@@ -69,9 +74,9 @@ async def test_heartbeat_keeps_claim(queue, db):
     assert not await queue.heartbeat(job_id, "someone-else")
 
 
-async def test_exhausted_jobs(queue, db):
+async def test_exhausted_jobs(queue):
     job_id = await queue.enqueue("t1")
-    await db.jobs.update_one(
+    await queue.col.update_one(
         {"_id": job_id},
         {
             "$set": {
@@ -83,7 +88,7 @@ async def test_exhausted_jobs(queue, db):
     )
     assert await queue.claim("w1") is None
     assert await queue.exhausted() == ["t1"]
-    assert (await db.jobs.find_one({"_id": job_id}))["state"] == "failed"
+    assert (await queue.col.find_one({"_id": job_id}))["state"] == "failed"
 
 
 async def test_retry_later(queue):

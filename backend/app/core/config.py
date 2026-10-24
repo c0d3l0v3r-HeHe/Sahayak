@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     mongo_db: str = "sahayak"
 
     # Auth
-    jwt_secret: str = "change-me-in-production"
+    jwt_secret: str = "change-me-in-production-please-use-32-bytes"
     jwt_ttl_days: int = 30
 
     # Demo mode routes every flow to the local mock sites

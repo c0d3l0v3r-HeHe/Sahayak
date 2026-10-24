@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.deps import AppState
-from app.api.v1 import auth, flows, intent, tasks
+from app.api.v1 import auth, flows, intent, stats, tasks
 from app.core.config import Settings, get_settings
 from app.core.logging import setup_logging
 from app.db.mongo import connect, ensure_indexes
@@ -72,8 +72,9 @@ def create_app(settings: Settings | None = None, registry: FlowRegistry | None =
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for router in (auth.router, flows.router, intent.router, tasks.router):
+    for router in (auth.router, flows.router, intent.router, tasks.router, stats.router):
         app.include_router(router, prefix="/v1")
+    app.include_router(stats.metrics_router)
 
     @app.get("/health")
     async def health() -> dict:

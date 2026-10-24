@@ -10,3 +10,4 @@ backend/data/
 .vscode/
 .DS_Store
 backend/scripts/recordings/
+mobile/android/build/
