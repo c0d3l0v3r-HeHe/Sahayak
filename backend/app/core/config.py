@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # Demo mode routes every flow to the local mock sites
     demo_mode: bool = True
     mock_sites_url: str = "http://localhost:8000/mock"
+    serve_mock_sites: bool = True  # mount the mock sites under /mock on the API
 
     # Intent providers (all optional; `rules` always works)
     intent_provider: str = ""  # force one of: gemini | groq | ollama | rules
@@ -48,6 +49,13 @@ class Settings(BaseSettings):
     job_claim_timeout_s: int = 300
     job_max_attempts: int = 2
     handoff_timeout_s: int = 300
+    step_retries: int = 2
+    # Run the worker inside the API process (handy for single-process local dev / demos)
+    embedded_worker: bool = False
+    worker_internal_port: int = 8100
+    worker_internal_url: str = ""  # how the API reaches this worker; auto-detected if empty
+    # Fixed answer for the mock CAPTCHA (tests only). Empty = random letters.
+    mock_captcha_code: str = ""
 
     # Storage
     screenshot_dir: Path = BACKEND_DIR / "data" / "screens"

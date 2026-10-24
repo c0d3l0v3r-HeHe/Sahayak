@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spot your train — demo replica</title><link rel="stylesheet" href="../common.css"></head>
+<body>
+<div class="demo-banner">Sahayak demo replica of NTES — not a railway website. Status is simulated.</div>
+<header class="site"><h1>NTES (demo)</h1><p>National Train Enquiry System</p></header>
+<main>
+  <form class="card" id="spot" aria-label="Spot your train">
+    <h2>Spot Your Train</h2>
+    <label for="trainNo">Train Number</label>
+    <input id="trainNo" name="trainNo" inputmode="numeric" maxlength="5" placeholder="e.g. 12301">
+    <label for="jDate">Journey Date</label>
+    <select id="jDate" name="jDate"></select>
+    <button type="submit">Get Status</button>
+    <div id="error" role="alert" class="hidden"></div>
+  </form>
+
+  <section id="status" class="card hidden" aria-label="Running status">
+    <h2 id="train-name"></h2>
+    <dl class="status">
+      <dt>Last Station</dt><dd data-testid="last-station"></dd>
+      <dt>Status</dt><dd data-testid="last-event"></dd>
+      <dt>Delay</dt><dd data-testid="delay"></dd>
+      <dt>Destination</dt><dd data-testid="destination"></dd>
+      <dt>Expected Arrival</dt><dd data-testid="expected-arrival"></dd>
+      <dt>Last Updated</dt><dd data-testid="updated"></dd>
+    </dl>
+  </section>
+</main>
+<script>
+const TRAINS = {
+  "12301": ["Howrah Rajdhani Express", ["Howrah Jn","Asansol Jn","Dhanbad Jn","Gaya Jn","Pt. DD Upadhyaya Jn","Prayagraj Jn","Kanpur Central","New Delhi"], "16:50", "10:00"],
+  "12951": ["Mumbai Rajdhani Express", ["Mumbai Central","Borivali","Surat","Vadodara Jn","Ratlam Jn","Kota Jn","New Delhi"], "17:00", "08:32"],
+  "12002": ["New Delhi Bhopal Shatabdi", ["New Delhi","Mathura Jn","Agra Cantt","Gwalior","Jhansi Jn","Bhopal Jn"], "06:00", "14:25"],
+  "12627": ["Karnataka Express", ["KSR Bengaluru","Dharmavaram Jn","Guntakal Jn","Raichur","Wadi","Daund Chord","Manmad Jn","Bhopal Jn","Jhansi Jn","Agra Cantt","New Delhi"], "19:20", "09:40"],
+  "12839": ["Howrah Chennai Mail", ["Howrah Jn","Kharagpur Jn","Bhubaneswar","Visakhapatnam","Vijayawada Jn","MGR Chennai Central"], "23:45", "04:45"],
+  "12423": ["Dibrugarh Rajdhani", ["Dibrugarh","Guwahati","New Jalpaiguri","Katihar Jn","Patna Jn","Pt. DD Upadhyaya Jn","Kanpur Central","New Delhi"], "20:55", "05:15"],
+  "12049": ["Gatimaan Express", ["Hazrat Nizamuddin","Agra Cantt","Gwalior","Jhansi Jn","Virangana Lakshmibai Jhansi"], "08:10", "12:35"],
+  "22691": ["Rajdhani Express", ["KSR Bengaluru","Anantapur","Secunderabad Jn","Nagpur","Bhopal Jn","Jhansi Jn","Hazrat Nizamuddin"], "20:00", "05:30"]
+};
+const POOL = ["Lucknow NR","Varanasi Jn","Patna Jn","Ahmedabad Jn","Jaipur","Ajmer Jn","Indore Jn","Nagpur","Raipur Jn","Pune Jn","Secunderabad Jn","Vijayawada Jn","Ernakulam Jn","Coimbatore Jn","Madurai Jn","Ranchi","Bhubaneswar","Guwahati","Amritsar Jn","Jammu Tawi"];
+function hash(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function iso(d) { return d.toISOString().slice(0, 10); }
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function label(d) { return `${String(d.getDate()).padStart(2,"0")}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`; }
+const sel = document.getElementById("jDate");
+const now = new Date();
+[["Today",0],["Yesterday",-1],["Day before yesterday",-2]].forEach(([name, off]) => {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + off, 12);
+  const o = document.createElement("option"); o.value = iso(d); o.textContent = `${label(d)} (${name})`; sel.appendChild(o);
+});
+
+function train(no) {
+  if (TRAINS[no]) return TRAINS[no];
+  const h = hash(no); const n = 5 + h % 4; const stops = [];
+  for (let i = 0; i < n; i++) { const s = POOL[(h + i * 7) % POOL.length]; if (!stops.includes(s)) stops.push(s); }
+  return [`Express ${no}`, stops, "10:15", "21:40"];
+}
+function fmtDelay(m) { if (m <= 0) return "On time"; const h = Math.floor(m / 60); return (h ? `${h} hr ` : "") + `${m % 60} min late`; }
+function addMin(hhmm, m) { const [h, mm] = hhmm.split(":").map(Number); const t = (h * 60 + mm + m) % 1440; return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`; }
+
+document.getElementById("spot").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const no = document.getElementById("trainNo").value.trim();
+  const err = document.getElementById("error");
+  const section = document.getElementById("status");
+  err.classList.add("hidden"); section.classList.add("hidden");
+  setTimeout(() => {
+    if (!/^[1-9]\d{4}$/.test(no)) { err.textContent = "Train not found. Please check the train number."; err.classList.remove("hidden"); return; }
+    const [name, stops, , arr] = train(no);
+    const h = hash(no + sel.value);
+    const daysAgo = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12) - new Date(sel.value + "T12:00:00")) / 86400000);
+    const idx = daysAgo >= 1 ? stops.length - 1 : 1 + h % Math.max(1, stops.length - 2);
+    const delay = (h >> 5) % 5 === 0 ? 0 : 5 + (h >> 7) % 95;
+    const reached = idx === stops.length - 1;
+    document.getElementById("train-name").textContent = `${no} ${name}`;
+    const set = (id, v) => document.querySelector(`[data-testid=${id}]`).textContent = v;
+    set("last-station", stops[idx]);
+    set("last-event", reached ? `Reached destination ${stops[idx]}` : `Departed from ${stops[idx]}`);
+    set("delay", fmtDelay(delay));
+    set("destination", stops[stops.length - 1]);
+    set("expected-arrival", reached ? `Arrived at ${addMin(arr, delay)}` : addMin(arr, delay));
+    set("updated", new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+    section.classList.remove("hidden");
+  }, 700);
+});
+</script>
+</body></html>

@@ -1,0 +1,184 @@
+{
+  "id": "train_running_status",
+  "version": 1,
+  "title": {
+    "en": "Where is my train?",
+    "hi": "मेरी ट्रेन कहाँ है?"
+  },
+  "description": {
+    "en": "Live running status of a train: last station, delay and expected arrival.",
+    "hi": "ट्रेन की लाइव स्थिति: आखिरी स्टेशन, देरी और पहुँचने का समय।"
+  },
+  "site": "https://enquiry.indianrail.gov.in/mntes",
+  "mock_path": "/mntes",
+  "est_minutes_saved": 5,
+  "keywords": [
+    "train",
+    "ट्रेन",
+    "gaadi",
+    "gadi",
+    "गाड़ी",
+    "running",
+    "status",
+    "late",
+    "delay",
+    "लेट",
+    "कहाँ",
+    "kahan",
+    "kaha",
+    "where",
+    "ntes",
+    "rail",
+    "रेल"
+  ],
+  "examples": [
+    "Where is train 12301?",
+    "मेरी ट्रेन 12951 कहाँ है?",
+    "12002 kitni late hai",
+    "train running status 12627 yesterday"
+  ],
+  "params": [
+    {
+      "name": "train_no",
+      "type": "string",
+      "regex": "^\\d{5}$",
+      "prompt": {
+        "en": "What is the 5-digit train number?",
+        "hi": "ट्रेन का 5 अंकों का नंबर क्या है?"
+      },
+      "example": "12301"
+    },
+    {
+      "name": "date",
+      "type": "date",
+      "required": false,
+      "default": "today",
+      "prompt": {
+        "en": "Which day did the train start? Today or yesterday?",
+        "hi": "ट्रेन किस दिन चली थी? आज या कल?"
+      },
+      "example": "today"
+    }
+  ],
+  "steps": [
+    {
+      "type": "narrate",
+      "en": "Opening the train enquiry website.",
+      "hi": "रेल पूछताछ वेबसाइट खोल रहे हैं।"
+    },
+    {
+      "type": "goto",
+      "url": "{{base}}/"
+    },
+    {
+      "type": "narrate",
+      "en": "Entering train number {{train_no}}.",
+      "hi": "ट्रेन नंबर {{train_no}} डाल रहे हैं।"
+    },
+    {
+      "type": "fill",
+      "locator": {
+        "label": "Train Number"
+      },
+      "value": "{{train_no}}"
+    },
+    {
+      "type": "select",
+      "locator": {
+        "label": "Journey Date"
+      },
+      "value": "{{date}}"
+    },
+    {
+      "type": "click",
+      "locator": {
+        "role": "button",
+        "name": "Get Status"
+      }
+    },
+    {
+      "type": "wait_for",
+      "locator": {
+        "css": "#status:not(.hidden), #error:not(.hidden)"
+      },
+      "timeout_ms": 20000
+    },
+    {
+      "type": "if_exists",
+      "locator": {
+        "role": "alert"
+      },
+      "timeout_ms": 0,
+      "then": [
+        {
+          "type": "fail",
+          "message": {
+            "en": "I could not find train {{train_no}}. Please check the number.",
+            "hi": "ट्रेन {{train_no}} नहीं मिली। कृपया नंबर जाँच लें।"
+          }
+        }
+      ]
+    },
+    {
+      "type": "narrate",
+      "en": "Reading the train's status.",
+      "hi": "ट्रेन की स्थिति पढ़ रहे हैं।"
+    },
+    {
+      "type": "extract",
+      "locator": {
+        "css": "#train-name"
+      },
+      "into": "train_name"
+    },
+    {
+      "type": "extract",
+      "locator": {
+        "test_id": "last-station"
+      },
+      "into": "last_station"
+    },
+    {
+      "type": "extract",
+      "locator": {
+        "test_id": "last-event"
+      },
+      "into": "last_event"
+    },
+    {
+      "type": "extract",
+      "locator": {
+        "test_id": "delay"
+      },
+      "into": "delay"
+    },
+    {
+      "type": "extract",
+      "locator": {
+        "test_id": "destination"
+      },
+      "into": "destination"
+    },
+    {
+      "type": "extract",
+      "locator": {
+        "test_id": "expected-arrival"
+      },
+      "into": "expected_arrival"
+    },
+    {
+      "type": "screenshot"
+    }
+  ],
+  "result_template": {
+    "en": "{{train_name}}: {{last_event}}. Delay: {{delay}}. Expected at {{destination}}: {{expected_arrival}}.",
+    "hi": "{{train_name}}: आखिरी स्टेशन {{last_station}}। देरी: {{delay}}। {{destination}} पहुँचने का समय: {{expected_arrival}}।"
+  },
+  "confirm_template": {
+    "en": "You want to know where train {{train_no}} is (started {{date}})?",
+    "hi": "आप ट्रेन {{train_no}} की स्थिति जानना चाहते हैं ({{date}} चली)?"
+  },
+  "requires": [],
+  "verified_at": null,
+  "enabled": true
+}

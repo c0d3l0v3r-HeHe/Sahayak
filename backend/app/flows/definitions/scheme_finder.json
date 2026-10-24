@@ -1,0 +1,580 @@
+{
+  "id": "scheme_finder",
+  "version": 1,
+  "title": {
+    "en": "Find government schemes",
+    "hi": "सरकारी योजनाएँ खोजें"
+  },
+  "description": {
+    "en": "Find schemes that match your age, gender, state and income.",
+    "hi": "आपकी उम्र, लिंग, राज्य और आमदनी के हिसाब से योजनाएँ खोजें।"
+  },
+  "site": "https://www.myscheme.gov.in",
+  "mock_path": "/myscheme",
+  "est_minutes_saved": 15,
+  "keywords": [
+    "scheme",
+    "schemes",
+    "yojana",
+    "yojna",
+    "योजना",
+    "योजनाएँ",
+    "योजनाएं",
+    "pension",
+    "पेंशन",
+    "benefit",
+    "sarkari",
+    "सरकारी",
+    "subsidy",
+    "myscheme"
+  ],
+  "examples": [
+    "Which government schemes can I get?",
+    "मेरे लिए कौन सी सरकारी योजना है?",
+    "Mujhe pension yojana batao, meri umar 65 hai",
+    "Schemes for a 30 year old woman in Bihar"
+  ],
+  "params": [
+    {
+      "name": "age",
+      "type": "int",
+      "regex": "^(?:[0-9]|[1-9][0-9]|1[01][0-9]|120)$",
+      "prompt": {
+        "en": "How old are you?",
+        "hi": "आपकी उम्र कितनी है?"
+      },
+      "example": "65"
+    },
+    {
+      "name": "gender",
+      "type": "enum",
+      "prompt": {
+        "en": "Are you a man, a woman, or transgender?",
+        "hi": "आप पुरुष हैं, महिला हैं, या ट्रांसजेंडर?"
+      },
+      "example": "female",
+      "options": [
+        {
+          "value": "male",
+          "label": {
+            "en": "Male",
+            "hi": "पुरुष"
+          },
+          "synonyms": [
+            "man",
+            "men",
+            "boy",
+            "m",
+            "mard",
+            "aadmi",
+            "purush",
+            "ladka",
+            "आदमी",
+            "मर्द",
+            "लड़का"
+          ]
+        },
+        {
+          "value": "female",
+          "label": {
+            "en": "Female",
+            "hi": "महिला"
+          },
+          "synonyms": [
+            "woman",
+            "women",
+            "girl",
+            "lady",
+            "f",
+            "mahila",
+            "aurat",
+            "stree",
+            "ladki",
+            "widow",
+            "औरत",
+            "स्त्री",
+            "लड़की",
+            "विधवा"
+          ]
+        },
+        {
+          "value": "transgender",
+          "label": {
+            "en": "Transgender",
+            "hi": "ट्रांसजेंडर"
+          },
+          "synonyms": [
+            "trans",
+            "kinnar",
+            "किन्नर",
+            "third gender"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "state",
+      "type": "enum",
+      "prompt": {
+        "en": "Which state do you live in?",
+        "hi": "आप किस राज्य में रहते हैं?"
+      },
+      "example": "bihar",
+      "options": [
+        {
+          "value": "andhra_pradesh",
+          "label": {
+            "en": "Andhra Pradesh",
+            "hi": "आंध्र प्रदेश"
+          },
+          "synonyms": [
+            "ap",
+            "andhra"
+          ]
+        },
+        {
+          "value": "arunachal_pradesh",
+          "label": {
+            "en": "Arunachal Pradesh",
+            "hi": "अरुणाचल प्रदेश"
+          },
+          "synonyms": [
+            "arunachal"
+          ]
+        },
+        {
+          "value": "assam",
+          "label": {
+            "en": "Assam",
+            "hi": "असम"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "bihar",
+          "label": {
+            "en": "Bihar",
+            "hi": "बिहार"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "chhattisgarh",
+          "label": {
+            "en": "Chhattisgarh",
+            "hi": "छत्तीसगढ़"
+          },
+          "synonyms": [
+            "chattisgarh",
+            "cg"
+          ]
+        },
+        {
+          "value": "goa",
+          "label": {
+            "en": "Goa",
+            "hi": "गोवा"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "gujarat",
+          "label": {
+            "en": "Gujarat",
+            "hi": "गुजरात"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "haryana",
+          "label": {
+            "en": "Haryana",
+            "hi": "हरियाणा"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "himachal_pradesh",
+          "label": {
+            "en": "Himachal Pradesh",
+            "hi": "हिमाचल प्रदेश"
+          },
+          "synonyms": [
+            "himachal",
+            "hp"
+          ]
+        },
+        {
+          "value": "jharkhand",
+          "label": {
+            "en": "Jharkhand",
+            "hi": "झारखंड"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "karnataka",
+          "label": {
+            "en": "Karnataka",
+            "hi": "कर्नाटक"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "kerala",
+          "label": {
+            "en": "Kerala",
+            "hi": "केरल"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "madhya_pradesh",
+          "label": {
+            "en": "Madhya Pradesh",
+            "hi": "मध्य प्रदेश"
+          },
+          "synonyms": [
+            "mp"
+          ]
+        },
+        {
+          "value": "maharashtra",
+          "label": {
+            "en": "Maharashtra",
+            "hi": "महाराष्ट्र"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "manipur",
+          "label": {
+            "en": "Manipur",
+            "hi": "मणिपुर"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "meghalaya",
+          "label": {
+            "en": "Meghalaya",
+            "hi": "मेघालय"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "mizoram",
+          "label": {
+            "en": "Mizoram",
+            "hi": "मिज़ोरम"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "nagaland",
+          "label": {
+            "en": "Nagaland",
+            "hi": "नागालैंड"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "odisha",
+          "label": {
+            "en": "Odisha",
+            "hi": "ओडिशा"
+          },
+          "synonyms": [
+            "orissa",
+            "ओड़िशा"
+          ]
+        },
+        {
+          "value": "punjab",
+          "label": {
+            "en": "Punjab",
+            "hi": "पंजाब"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "rajasthan",
+          "label": {
+            "en": "Rajasthan",
+            "hi": "राजस्थान"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "sikkim",
+          "label": {
+            "en": "Sikkim",
+            "hi": "सिक्किम"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "tamil_nadu",
+          "label": {
+            "en": "Tamil Nadu",
+            "hi": "तमिलनाडु"
+          },
+          "synonyms": [
+            "tn",
+            "tamilnadu",
+            "तमिल नाडु"
+          ]
+        },
+        {
+          "value": "telangana",
+          "label": {
+            "en": "Telangana",
+            "hi": "तेलंगाना"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "tripura",
+          "label": {
+            "en": "Tripura",
+            "hi": "त्रिपुरा"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "uttar_pradesh",
+          "label": {
+            "en": "Uttar Pradesh",
+            "hi": "उत्तर प्रदेश"
+          },
+          "synonyms": [
+            "up"
+          ]
+        },
+        {
+          "value": "uttarakhand",
+          "label": {
+            "en": "Uttarakhand",
+            "hi": "उत्तराखंड"
+          },
+          "synonyms": [
+            "uttaranchal"
+          ]
+        },
+        {
+          "value": "west_bengal",
+          "label": {
+            "en": "West Bengal",
+            "hi": "पश्चिम बंगाल"
+          },
+          "synonyms": [
+            "bengal",
+            "wb",
+            "बंगाल"
+          ]
+        },
+        {
+          "value": "andaman_nicobar",
+          "label": {
+            "en": "Andaman and Nicobar Islands",
+            "hi": "अंडमान और निकोबार"
+          },
+          "synonyms": [
+            "andaman"
+          ]
+        },
+        {
+          "value": "chandigarh",
+          "label": {
+            "en": "Chandigarh",
+            "hi": "चंडीगढ़"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "dadra_nagar_haveli_daman_diu",
+          "label": {
+            "en": "Dadra and Nagar Haveli and Daman and Diu",
+            "hi": "दादरा और नगर हवेली और दमन और दीव"
+          },
+          "synonyms": [
+            "daman",
+            "diu",
+            "dadra"
+          ]
+        },
+        {
+          "value": "delhi",
+          "label": {
+            "en": "Delhi",
+            "hi": "दिल्ली"
+          },
+          "synonyms": [
+            "new delhi",
+            "dilli",
+            "ncr"
+          ]
+        },
+        {
+          "value": "jammu_kashmir",
+          "label": {
+            "en": "Jammu and Kashmir",
+            "hi": "जम्मू और कश्मीर"
+          },
+          "synonyms": [
+            "j&k",
+            "jammu",
+            "kashmir",
+            "jammu kashmir"
+          ]
+        },
+        {
+          "value": "ladakh",
+          "label": {
+            "en": "Ladakh",
+            "hi": "लद्दाख"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "lakshadweep",
+          "label": {
+            "en": "Lakshadweep",
+            "hi": "लक्षद्वीप"
+          },
+          "synonyms": []
+        },
+        {
+          "value": "puducherry",
+          "label": {
+            "en": "Puducherry",
+            "hi": "पुडुचेरी"
+          },
+          "synonyms": [
+            "pondicherry"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "income",
+      "type": "int",
+      "regex": "^\\d{1,9}$",
+      "prompt": {
+        "en": "What is your family's yearly income in rupees?",
+        "hi": "आपके परिवार की सालाना आमदनी कितने रुपये है?"
+      },
+      "example": "120000"
+    }
+  ],
+  "steps": [
+    {
+      "type": "narrate",
+      "en": "Opening the scheme finder website.",
+      "hi": "योजना खोजने वाली वेबसाइट खोल रहे हैं।"
+    },
+    {
+      "type": "goto",
+      "url": "{{base}}/"
+    },
+    {
+      "type": "narrate",
+      "en": "Filling in your details.",
+      "hi": "आपकी जानकारी भर रहे हैं।"
+    },
+    {
+      "type": "click",
+      "locator": {
+        "role": "radio",
+        "name": "{{gender|title}}",
+        "exact": true
+      }
+    },
+    {
+      "type": "fill",
+      "locator": {
+        "label": "Age"
+      },
+      "value": "{{age}}"
+    },
+    {
+      "type": "select",
+      "locator": {
+        "label": "State"
+      },
+      "value": "{{state}}"
+    },
+    {
+      "type": "fill",
+      "locator": {
+        "label": "Annual family income (₹)"
+      },
+      "value": "{{income}}"
+    },
+    {
+      "type": "narrate",
+      "en": "Searching for schemes.",
+      "hi": "योजनाएँ खोज रहे हैं।"
+    },
+    {
+      "type": "click",
+      "locator": {
+        "role": "button",
+        "name": "Find schemes"
+      }
+    },
+    {
+      "type": "wait_for",
+      "locator": {
+        "css": "#results:not(.hidden)"
+      },
+      "timeout_ms": 20000
+    },
+    {
+      "type": "narrate",
+      "en": "Reading the results.",
+      "hi": "नतीजे पढ़ रहे हैं।"
+    },
+    {
+      "type": "extract",
+      "as": "list",
+      "locator": {
+        "css": "#scheme-list > li"
+      },
+      "into": "schemes",
+      "limit": 5,
+      "fields": {
+        "name": {
+          "locator": {
+            "role": "link"
+          }
+        },
+        "link": {
+          "locator": {
+            "role": "link"
+          },
+          "attribute": "href"
+        },
+        "benefit": {
+          "locator": {
+            "css": ".benefit"
+          }
+        }
+      }
+    },
+    {
+      "type": "screenshot"
+    }
+  ],
+  "result_template": {
+    "en": "{{^schemes}}I could not find a matching scheme. You can try again with different details.{{/schemes}}{{#schemes}}{{@n}}. {{name}} — {{benefit}}\n{{/schemes}}",
+    "hi": "{{^schemes}}आपके लिए कोई योजना नहीं मिली। आप दूसरी जानकारी के साथ फिर कोशिश कर सकते हैं।{{/schemes}}{{#schemes}}{{@n}}. {{name}} — {{benefit}}\n{{/schemes}}"
+  },
+  "confirm_template": {
+    "en": "Shall I look for schemes for a {{age}}-year-old, {{gender}}, living in {{state}}, with a yearly family income of ₹{{income|inr}}?",
+    "hi": "क्या मैं आपके लिए योजनाएँ खोजूँ? उम्र {{age}} साल, {{gender}}, राज्य {{state}}, परिवार की सालाना आमदनी ₹{{income|inr}}।"
+  },
+  "requires": [],
+  "verified_at": null,
+  "enabled": true
+}

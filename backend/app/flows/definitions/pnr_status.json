@@ -1,0 +1,240 @@
+{
+  "id": "pnr_status",
+  "version": 1,
+  "title": {
+    "en": "PNR status",
+    "hi": "PNR स्थिति"
+  },
+  "description": {
+    "en": "Check if your train ticket is confirmed.",
+    "hi": "देखिए कि आपका ट्रेन टिकट कन्फ़र्म हुआ या नहीं।"
+  },
+  "site": "https://www.indianrail.gov.in/enquiry/PNR",
+  "mock_path": "/pnr",
+  "est_minutes_saved": 4,
+  "keywords": [
+    "pnr",
+    "पीएनआर",
+    "ticket",
+    "टिकट",
+    "confirm",
+    "confirmed",
+    "कन्फर्म",
+    "कन्फ़र्म",
+    "waiting",
+    "वेटिंग",
+    "rac",
+    "seat",
+    "berth",
+    "सीट"
+  ],
+  "examples": [
+    "Check my PNR 1234567890",
+    "मेरा टिकट कन्फर्म हुआ क्या?",
+    "PNR status batao 4512345678",
+    "is my ticket confirmed"
+  ],
+  "params": [
+    {
+      "name": "pnr",
+      "type": "string",
+      "regex": "^\\d{10}$",
+      "sensitive": true,
+      "prompt": {
+        "en": "Please tell me the 10-digit PNR number from your ticket.",
+        "hi": "कृपया टिकट पर लिखा 10 अंकों का PNR नंबर बताइए।"
+      },
+      "example": "4512345678"
+    }
+  ],
+  "steps": [
+    {
+      "type": "narrate",
+      "en": "Opening the PNR enquiry page.",
+      "hi": "PNR पूछताछ पेज खोल रहे हैं।"
+    },
+    {
+      "type": "goto",
+      "url": "{{base}}/"
+    },
+    {
+      "type": "narrate",
+      "en": "Entering your PNR number.",
+      "hi": "आपका PNR नंबर डाल रहे हैं।"
+    },
+    {
+      "type": "fill",
+      "locator": {
+        "label": "PNR Number"
+      },
+      "value": "{{pnr}}"
+    },
+    {
+      "type": "wait_for",
+      "locator": {
+        "role": "img",
+        "name": "Captcha image"
+      }
+    },
+    {
+      "type": "narrate",
+      "en": "The website wants to check that a person is using it. I need your help.",
+      "hi": "वेबसाइट देखना चाहती है कि इसे कोई इंसान चला रहा है। मुझे आपकी मदद चाहिए।"
+    },
+    {
+      "type": "ask_user",
+      "kind": "captcha",
+      "prompt": {
+        "en": "Please read the letters in the picture.",
+        "hi": "कृपया तस्वीर में लिखे अक्षर पढ़कर बताइए।"
+      },
+      "screenshot_locator": {
+        "role": "img",
+        "name": "Captcha image"
+      },
+      "fill_locator": {
+        "label": "Enter the characters shown"
+      }
+    },
+    {
+      "type": "click",
+      "locator": {
+        "role": "button",
+        "name": "Get Status"
+      }
+    },
+    {
+      "type": "wait_for",
+      "locator": {
+        "css": "#result:not(.hidden), #error:not(.hidden)"
+      },
+      "timeout_ms": 20000
+    },
+    {
+      "type": "if_exists",
+      "locator": {
+        "text": "Invalid captcha"
+      },
+      "timeout_ms": 0,
+      "then": [
+        {
+          "type": "narrate",
+          "en": "The letters did not match. Let's try once more.",
+          "hi": "अक्षर मेल नहीं खाए। एक बार फिर कोशिश करते हैं।"
+        },
+        {
+          "type": "wait_for",
+          "locator": {
+            "role": "img",
+            "name": "Captcha image"
+          }
+        },
+        {
+          "type": "ask_user",
+          "kind": "captcha",
+          "prompt": {
+            "en": "Please read the letters in the picture.",
+            "hi": "कृपया तस्वीर में लिखे अक्षर पढ़कर बताइए।"
+          },
+          "screenshot_locator": {
+            "role": "img",
+            "name": "Captcha image"
+          },
+          "fill_locator": {
+            "label": "Enter the characters shown"
+          }
+        },
+        {
+          "type": "click",
+          "locator": {
+            "role": "button",
+            "name": "Get Status"
+          }
+        },
+        {
+          "type": "wait_for",
+          "locator": {
+            "css": "#result:not(.hidden), #error:not(.hidden)"
+          },
+          "timeout_ms": 20000
+        },
+        {
+          "type": "if_exists",
+          "locator": {
+            "text": "Invalid captcha"
+          },
+          "timeout_ms": 0,
+          "then": [
+            {
+              "type": "fail",
+              "message": {
+                "en": "The letters did not match again. Please try later.",
+                "hi": "अक्षर फिर से मेल नहीं खाए। कृपया बाद में कोशिश करें।"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "if_exists",
+      "locator": {
+        "text": "PNR not found"
+      },
+      "timeout_ms": 0,
+      "then": [
+        {
+          "type": "fail",
+          "message": {
+            "en": "This PNR was not found. Please check the number on your ticket.",
+            "hi": "यह PNR नहीं मिला। कृपया टिकट पर लिखा नंबर जाँच लें।"
+          }
+        }
+      ]
+    },
+    {
+      "type": "narrate",
+      "en": "Reading your ticket status.",
+      "hi": "आपके टिकट की स्थिति पढ़ रहे हैं।"
+    },
+    {
+      "type": "extract",
+      "locator": {
+        "css": "#train"
+      },
+      "into": "train"
+    },
+    {
+      "type": "extract",
+      "locator": {
+        "test_id": "chart"
+      },
+      "into": "chart"
+    },
+    {
+      "type": "extract",
+      "as": "table",
+      "locator": {
+        "role": "table",
+        "name": "Passenger status"
+      },
+      "into": "passengers"
+    },
+    {
+      "type": "screenshot"
+    }
+  ],
+  "result_template": {
+    "en": "Train {{train}}. {{#passengers}}Passenger {{@n}}: {{current_status}}. {{/passengers}}{{chart}}.",
+    "hi": "ट्रेन {{train}}। {{#passengers}}यात्री {{@n}}: {{current_status}}। {{/passengers}}{{chart}}।"
+  },
+  "confirm_template": {
+    "en": "You want to check the status of PNR {{pnr}}?",
+    "hi": "आप PNR {{pnr}} की स्थिति जानना चाहते हैं?"
+  },
+  "requires": [
+    "captcha"
+  ],
+  "verified_at": null,
+  "enabled": true
+}
